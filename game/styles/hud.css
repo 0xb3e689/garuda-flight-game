@@ -1,284 +1,35 @@
-/* Garuda — Aviation HUD & Unified ESC Pause / Mission Dialog */
-
-:root {
-  color-scheme: dark;
-  --panel-bg: rgba(11, 18, 26, 0.94);
-  --panel-border: rgba(88, 224, 210, 0.42);
-  --accent-cyan: #38f2d4;
-  --accent-amber: #ffbe4f;
-  --text-main: #edf6f9;
-  --text-dim: #9db7c4;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  background: #0b1622;
-  color: var(--text-main);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  overflow: hidden;
-  user-select: none;
-}
-
-#flight-canvas,
-#hud-canvas {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-#hud-canvas {
-  pointer-events: none;
-}
-
-/* Initial Flight Briefing / Onboarding Modal */
-dialog#briefing-dialog {
-  padding: 0;
-  border: 1.5px solid rgba(255, 190, 79, 0.55);
-  border-radius: 14px;
-  background: var(--panel-bg);
-  color: var(--text-main);
-  max-width: 620px;
-  width: calc(100vw - 32px);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.72);
-}
-
-dialog#briefing-dialog[open] {
-  display: flex;
-  flex-direction: column;
-}
-
-dialog#briefing-dialog::backdrop {
-  background: rgba(4, 10, 16, 0.52);
-  backdrop-filter: blur(4px);
-}
-
-.briefing-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(120, 180, 195, 0.22);
-}
-
-.briefing-tag {
-  display: block;
-  font-size: 10.5px;
-  color: var(--accent-cyan);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  margin-bottom: 3px;
-}
-
-.briefing-header h1 {
-  margin: 0;
-  font-size: 18px;
-  color: var(--accent-amber);
-}
-
-#launch-btn {
-  padding: 10px 16px;
-  border-radius: 8px;
-  border: 1.5px solid var(--accent-cyan);
-  background: rgba(56, 242, 212, 0.2);
-  color: #ffffff;
-  font: 700 12px/1 inherit;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-#launch-btn:hover,
-#launch-btn:focus-visible {
-  background: rgba(56, 242, 212, 0.34);
-  outline: none;
-}
-
-.briefing-body {
-  padding: 14px 20px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.briefing-goal {
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: rgba(255, 190, 79, 0.12);
-  border-left: 3px solid var(--accent-amber);
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: #fff6e0;
-}
-
-.briefing-steps-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--accent-cyan);
-}
-
-.key-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 14px;
-  font-size: 11.5px;
-  color: var(--text-dim);
-}
-
-.key-grid kbd {
-  display: inline-block;
-  padding: 2px 6px;
-  margin-right: 3px;
-  border-radius: 4px;
-  border: 1px solid rgba(120, 195, 205, 0.35);
-  background: rgba(22, 36, 48, 0.95);
-  color: #ffffff;
-  font: 700 10.5px/1.2 inherit;
-}
-
-/* Unified native ESC pause & mission modal dialog */
-dialog#pause-dialog {
-  padding: 0;
-  border: 1.5px solid var(--panel-border);
-  border-radius: 14px;
-  background: var(--panel-bg);
-  color: var(--text-main);
-  max-width: 680px;
-  width: calc(100vw - 32px);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.68);
-}
-
-dialog#pause-dialog[open] {
-  display: flex;
-  flex-direction: column;
-}
-
-dialog#pause-dialog:modal {
-  overscroll-behavior: contain;
-}
-
-dialog#pause-dialog::backdrop {
-  background: rgba(4, 10, 16, 0.68);
-  backdrop-filter: blur(5px);
-  overflow: hidden;
-  overscroll-behavior: contain;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  dialog#pause-dialog {
-    transition: opacity 0.18s ease-out, transform 0.18s ease-out, display 0.18s allow-discrete, overlay 0.18s allow-discrete;
-  }
-  @starting-style {
-    dialog#pause-dialog[open] {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-  }
-}
-
-.pause-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(120, 180, 195, 0.22);
-}
-
-.pause-header h1 {
-  margin: 0;
-  font-size: 18px;
-  letter-spacing: 0.06em;
-  color: var(--accent-amber);
-}
-
-.pause-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.pause-actions button {
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid rgba(110, 190, 200, 0.35);
-  background: rgba(20, 34, 46, 0.92);
-  color: var(--text-main);
-  font: 700 11px/1 inherit;
-  cursor: pointer;
-}
-
-.pause-actions button:hover,
-.pause-actions button:focus-visible {
-  border-color: var(--accent-cyan);
-  background: rgba(56, 242, 212, 0.18);
-  outline: none;
-}
-
-#resume-btn {
-  border-color: var(--accent-cyan);
-  background: rgba(56, 242, 212, 0.16);
-}
-
-.mission-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  padding: 16px 20px;
-}
-
-.mission-card {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  text-align: left;
-  padding: 12px 14px;
-  border-radius: 9px;
-  border: 1px solid rgba(110, 190, 200, 0.28);
-  background: rgba(18, 29, 40, 0.9);
-  color: var(--text-main);
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.mission-card.active {
-  border-color: var(--accent-amber);
-  background: rgba(34, 48, 60, 0.96);
-}
-
-.mission-card:hover,
-.mission-card:focus-visible {
-  border-color: var(--accent-cyan);
-  outline: 2px solid var(--accent-cyan);
-  outline-offset: 2px;
-}
-
-.mission-badge {
-  color: var(--accent-cyan);
-  font-size: 10.5px;
-  font-weight: 700;
-}
-
-.mission-desc {
-  color: var(--text-dim);
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.controls-bar {
-  padding: 11px 20px;
-  background: rgba(8, 14, 20, 0.78);
-  border-top: 1px solid rgba(120, 180, 195, 0.18);
-  font-size: 11px;
-  color: var(--text-dim);
-  line-height: 1.45;
-}
+/* Garuda — Aviation HUD, Onboarding Briefing & Unified ESC Pause Dialog */
+:root{color-scheme:dark;--bg:rgba(11,18,26,.94);--bd:rgba(88,224,210,.42);--cy:#38f2d4;--am:#ffbe4f;--tx:#edf6f9;--dm:#9db7c4}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:#0b1622;color:var(--tx);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;overflow:hidden;user-select:none}
+#flight-canvas,#hud-canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#hud-canvas{pointer-events:none}
+dialog{padding:0;border-radius:14px;background:var(--bg);color:var(--tx);width:calc(100vw - 32px);box-shadow:0 24px 64px rgba(0,0,0,.7)}
+dialog#briefing-dialog{border:1.5px solid rgba(255,190,79,.55);max-width:620px}
+dialog#pause-dialog{border:1.5px solid var(--bd);max-width:680px}
+dialog[open]{display:flex;flex-direction:column}
+dialog#pause-dialog:modal{overscroll-behavior:contain}
+dialog#briefing-dialog::backdrop{background:rgba(4,10,16,.52);backdrop-filter:blur(4px)}
+dialog#pause-dialog::backdrop{background:rgba(4,10,16,.68);backdrop-filter:blur(5px);overflow:hidden;overscroll-behavior:contain}
+@media(prefers-reduced-motion:no-preference){dialog#pause-dialog{transition:opacity .18s ease-out,transform .18s ease-out,display .18s allow-discrete,overlay .18s allow-discrete}@starting-style{dialog#pause-dialog[open]{opacity:0;transform:translateY(10px)}}}
+.briefing-header,.pause-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid rgba(120,180,195,.22)}
+.briefing-tag{display:block;font-size:10.5px;color:var(--cy);font-weight:700;letter-spacing:.06em;margin-bottom:3px}
+.briefing-header h1,.pause-header h1{margin:0;font-size:18px;color:var(--am);letter-spacing:.04em}
+#launch-btn{padding:10px 16px;border-radius:8px;border:1.5px solid var(--cy);background:rgba(56,242,212,.2);color:#fff;font:700 12px/1 inherit;cursor:pointer;white-space:nowrap}
+#launch-btn:hover,#launch-btn:focus-visible{background:rgba(56,242,212,.34);outline:none}
+.briefing-body{padding:14px 20px 18px;display:flex;flex-direction:column;gap:12px}
+.briefing-goal{margin:0;padding:10px 12px;border-radius:8px;background:rgba(255,190,79,.12);border-left:3px solid var(--am);font-size:12.5px;line-height:1.45;color:#fff6e0}
+.briefing-steps-label{font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--cy)}
+.key-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;font-size:11.5px;color:var(--dm)}
+.key-grid kbd{display:inline-block;padding:2px 6px;margin-right:3px;border-radius:4px;border:1px solid rgba(120,195,205,.35);background:rgba(22,36,48,.95);color:#fff;font:700 10.5px/1.2 inherit}
+.pause-actions{display:flex;gap:8px}
+.pause-actions button{padding:8px 12px;border-radius:6px;border:1px solid rgba(110,190,200,.35);background:rgba(20,34,46,.92);color:var(--tx);font:700 11px/1 inherit;cursor:pointer}
+.pause-actions button:hover,.pause-actions button:focus-visible{border-color:var(--cy);background:rgba(56,242,212,.18);outline:none}
+#resume-btn{border-color:var(--cy);background:rgba(56,242,212,.16)}
+.mission-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:16px 20px}
+.mission-card{display:flex;flex-direction:column;gap:5px;text-align:left;padding:12px 14px;border-radius:9px;border:1px solid rgba(110,190,200,.28);background:rgba(18,29,40,.9);color:var(--tx);font-family:inherit;cursor:pointer}
+.mission-card.active{border-color:var(--am);background:rgba(34,48,60,.96)}
+.mission-card:hover,.mission-card:focus-visible{border-color:var(--cy);outline:2px solid var(--cy);outline-offset:2px}
+.mission-badge{color:var(--cy);font-size:10.5px;font-weight:700}
+.mission-desc{color:var(--dm);font-size:11px;line-height:1.4}
+.controls-bar{padding:11px 20px;background:rgba(8,14,20,.78);border-top:1px solid rgba(120,180,195,.18);font-size:11px;color:var(--dm);line-height:1.45}

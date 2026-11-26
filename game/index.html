@@ -1,63 +1,47 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Garuda</title>
-    <link rel="stylesheet" href="./styles/hud.css" />
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "./vendor/three.module.min.js"
-        }
-      }
-    </script>
-  </head>
-  <body>
-    <canvas id="flight-canvas" aria-label="Garuda flight viewport"></canvas>
-    <canvas id="hud-canvas" aria-hidden="true"></canvas>
-
-    <dialog id="briefing-dialog" aria-labelledby="briefing-title">
-      <div class="briefing-header">
-        <div>
-          <span class="briefing-tag">FLIGHT BRIEFING · GARUDA G-4 (PK-GRD)</span>
-          <h1 id="briefing-title">M1 · LIGHTHOUSE MAIL</h1>
-        </div>
-        <button id="launch-btn" type="button" autofocus>LAUNCH FLIGHT [ENTER]</button>
-      </div>
-      <div class="briefing-body">
-        <p id="briefing-goal" class="briefing-goal"></p>
-        <div class="briefing-steps-label">HOW TO FLY</div>
-        <div class="key-grid">
-          <div><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd> Bank &amp; Turn</div>
-          <div><kbd>W</kbd><kbd>S</kbd> / <kbd>↑</kbd><kbd>↓</kbd> Pitch Down / Up</div>
-          <div><kbd>Shift</kbd> / <kbd>Ctrl</kbd> Throttle Up / Down</div>
-          <div><kbd>F</kbd> Flaps · <kbd>G</kbd> Gear · <kbd>B</kbd> Brake</div>
-          <div><kbd>C</kbd> Cockpit / Chase View</div>
-          <div><kbd>V</kbd> Sky Weather · <kbd>Space</kbd> Drop Cargo</div>
-          <div><kbd>R</kbd> Retry · <kbd>Esc</kbd> Pause &amp; Missions</div>
-        </div>
-      </div>
-    </dialog>
-
-    <dialog id="pause-dialog" aria-labelledby="pause-title" closedby="any">
-      <div class="pause-header">
-        <h1 id="pause-title">PAUSED · GARUDA</h1>
-        <div class="pause-actions">
-          <button id="resume-btn" type="button" autofocus>RESUME [ESC]</button>
-          <button id="weather-btn" type="button">SKY: CLEAR [V]</button>
-          <button id="restart-btn" type="button">RESTART [R]</button>
-          <button id="mute-btn" type="button">AUDIO: ON</button>
-        </div>
-      </div>
-
-      <div id="mission-list" class="mission-grid"></div>
-
-      <div class="controls-bar">
-        A/D or ←/→ Turn · W/S or ↑/↓ Pitch · Q/E Rudder · Shift/Ctrl Throttle · F Flaps · G Gear · B Brakes · Space Drop · C Camera · V Weather · Esc Pause
-      </div>
-    </dialog>
-
-    <script type="module" src="./src/main.js"></script>
-  </body>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Garuda</title>
+<link rel="stylesheet" href="./styles/hud.css" />
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+</head>
+<body>
+<canvas id="flight-canvas" aria-label="Garuda flight viewport"></canvas>
+<canvas id="hud-canvas" aria-hidden="true"></canvas>
+<dialog id="briefing-dialog" aria-labelledby="briefing-title">
+<div class="briefing-header">
+<div><span class="briefing-tag">FLIGHT BRIEFING · GARUDA G-4 (PK-GRD)</span><h1 id="briefing-title">M1 · LIGHTHOUSE MAIL</h1></div>
+<button id="launch-btn" type="button" autofocus>LAUNCH FLIGHT [ENTER]</button>
+</div>
+<div class="briefing-body">
+<p id="briefing-goal" class="briefing-goal"></p>
+<div class="briefing-steps-label">HOW TO FLY</div>
+<div class="key-grid">
+<div><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd> Bank &amp; Turn</div>
+<div><kbd>W</kbd><kbd>S</kbd> / <kbd>↑</kbd><kbd>↓</kbd> Pitch Down / Up</div>
+<div><kbd>Shift</kbd> / <kbd>Ctrl</kbd> Throttle Up / Down</div>
+<div><kbd>F</kbd> Flaps · <kbd>G</kbd> Gear · <kbd>B</kbd> Brake</div>
+<div><kbd>C</kbd> Cockpit / Chase View</div>
+<div><kbd>V</kbd> Sky Weather · <kbd>Space</kbd> Drop Cargo</div>
+<div><kbd>R</kbd> Retry · <kbd>Esc</kbd> Pause &amp; Missions</div>
+</div>
+</div>
+</dialog>
+<dialog id="pause-dialog" aria-labelledby="pause-title" closedby="any">
+<div class="pause-header">
+<h1 id="pause-title">PAUSED · GARUDA</h1>
+<div class="pause-actions">
+<button id="resume-btn" type="button" autofocus>RESUME [ESC]</button>
+<button id="weather-btn" type="button">SKY: CLEAR [V]</button>
+<button id="restart-btn" type="button">RESTART [R]</button>
+<button id="mute-btn" type="button">AUDIO: ON</button>
+</div>
+</div>
+<div id="mission-list" class="mission-grid"></div>
+<div class="controls-bar">A/D or ←/→ Turn · W/S or ↑/↓ Pitch · Q/E Rudder · Shift/Ctrl Throttle · F Flaps · G Gear · B Brakes · Space Drop · C Camera · V Weather · Esc Pause</div>
+</dialog>
+<script type="module" src="./src/main.js"></script>
+</body>
 </html>

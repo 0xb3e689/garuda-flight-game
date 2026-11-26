@@ -1,645 +1,142 @@
-// Multi-layer soft billboard particle & crash debris engine for Garuda:
-// roaring multi-tone engine fires, billowing dark smoke, flying wreckage shards,
-// massive ocean crash splash plumes, tire touchdown smoke, wingtip contrails, and storm rain.
-
-import * as THREE from 'three';
+// Multi-layer soft sprite particle, 3D crash debris, ground gouge trench, wingtip contrail, and storm rain engine.
+import * as T from 'three';
 import { createSoftParticleTexture } from './procedural-textures.js';
-import { sampleTerrainHeight, sampleTerrainNormal } from './terrain-world.js';
+import { sampleTerrainHeight as sH, sampleTerrainNormal as sN } from './terrain-world.js';
+
+const {random:R,cos:C,sin:S,abs:A,max:MX,min:MN,hypot:HY,PI}=Math;
+const v3=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),rn=(s)=>(R()-.5)*s,UP=v3(0,1,0),jit=(o,a,b,c)=>o.clone().add(v3(rn(a),b,rn(c)));
 
 function createGougeMarkTexture() {
-  const c = document.createElement('canvas');
-  c.width = 128;
-  c.height = 128;
-  const ctx = c.getContext('2d');
-  ctx.clearRect(0, 0, 128, 128);
-  // Torn dark-earth / charred asphalt furrow with rough displaced edges
-  const grad = ctx.createRadialGradient(64, 64, 8, 64, 64, 58);
-  grad.addColorStop(0, 'rgba(18, 13, 9, 0.92)');
-  grad.addColorStop(0.45, 'rgba(38, 26, 16, 0.78)');
-  grad.addColorStop(0.75, 'rgba(72, 52, 34, 0.42)');
-  grad.addColorStop(1, 'rgba(72, 52, 34, 0)');
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.ellipse(64, 64, 34, 56, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Deep twin parallel gouge ruts (belly keel + nacelle/gear scrape lines)
-  ctx.fillStyle = 'rgba(10, 8, 6, 0.92)';
-  ctx.fillRect(46, 12, 12, 104);
-  ctx.fillRect(72, 16, 10, 96);
-  // High-contrast scraped gravel/asphalt ridges + glowing hot-metal friction scorch edges!
-  ctx.fillStyle = 'rgba(195, 168, 132, 0.56)';
-  ctx.fillRect(35, 18, 6, 90);
-  ctx.fillRect(86, 20, 6, 86);
-  ctx.fillStyle = 'rgba(235, 120, 42, 0.28)';
-  ctx.fillRect(50, 22, 4, 80);
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
+  const cv=Object.assign(document.createElement('canvas'),{width:128,height:128}),x=cv.getContext('2d'),g=x.createRadialGradient(64,64,8,64,64,58);
+  [[0,'rgba(18,13,9,.92)'],[.45,'rgba(38,26,16,.78)'],[.75,'rgba(72,52,34,.42)'],[1,'rgba(72,52,34,0)']].forEach(([t,s])=>g.addColorStop(t,s));
+  x.fillStyle=g;x.beginPath();x.ellipse(64,64,34,56,0,0,PI*2);x.fill();
+  [['rgba(10,8,6,.92)',46,12,12,104],['rgba(10,8,6,.92)',72,16,10,96],['rgba(195,168,132,.56)',35,18,6,90],['rgba(195,168,132,.56)',86,20,6,86],['rgba(235,120,42,.28)',50,22,4,80]].forEach(([f,a,b,w,h])=>{x.fillStyle=f;x.fillRect(a,b,w,h);});
+  const t=new T.CanvasTexture(cv);t.colorSpace=T.SRGBColorSpace;return t;
 }
 
 export function createEffectsSystem(scene) {
-  const smokeTex = createSoftParticleTexture('smoke');
-  const glowTex = createSoftParticleTexture('glow');
-
-  // 1. Expanded 180-sprite pool for roaring layered fire, smoke, embers & ocean splash plumes
-  const pool = [];
-  for (let i = 0; i < 180; i++) {
-    const mat = new THREE.SpriteMaterial({
-      map: smokeTex,
-      color: '#ffffff',
-      transparent: true,
-      opacity: 0,
-      depthWrite: false,
-    });
-    const sprite = new THREE.Sprite(mat);
-    sprite.visible = false;
-    scene.add(sprite);
-    pool.push({
-      sprite,
-      mat,
-      life: 0,
-      maxLife: 1,
-      vel: new THREE.Vector3(),
-      gravity: 0,
-      startScale: 2,
-      endScale: 8,
-      baseOpacity: 0.7,
-    });
-  }
-  let cursor = 0;
-
-  function emitSprite({
-    pos,
-    vel,
-    gravity = 0,
-    color = '#eef2f6',
-    life = 1.4,
-    startScale = 2.0,
-    endScale = 7.5,
-    opacity = 0.65,
-    additive = false,
-  }) {
-    const p = pool[cursor++ % pool.length];
-    p.sprite.position.copy(pos);
-    p.sprite.scale.setScalar(startScale);
-    p.sprite.visible = true;
-    p.mat.map = additive ? glowTex : smokeTex;
-    p.mat.blending = additive ? THREE.AdditiveBlending : THREE.NormalBlending;
-    p.mat.color.set(color);
-    p.mat.opacity = opacity;
-    p.life = life;
-    p.maxLife = life;
-    p.vel.copy(vel);
-    p.gravity = gravity;
-    p.startScale = startScale;
-    p.endScale = endScale;
-    p.baseOpacity = opacity;
-  }
-
-  // 2. Physical 3D Wreckage Debris Shards (detached prop blades, wing panels, gear struts on impact!)
-  const debrisList = [];
-  const debrisColors = ['#e55320', '#13495e', '#f3ede0', '#242c34', '#f5ab29'];
-  for (let i = 0; i < 16; i++) {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(0.45 + (i % 3) * 0.45, 0.14 + (i % 2) * 0.12, 0.75 + (i % 4) * 0.35),
-      new THREE.MeshStandardMaterial({
-        color: debrisColors[i % debrisColors.length],
-        roughness: 0.55,
-        metalness: 0.35,
-      }),
-    );
-    mesh.visible = false;
-    mesh.castShadow = true;
-    scene.add(mesh);
-    debrisList.push({
-      mesh,
-      vel: new THREE.Vector3(),
-      rotVel: new THREE.Vector3(),
-      life: 0,
-      floorY: 0,
-    });
-  }
-
-  // 2B. Persistent 3D Terrain-Conforming Ground Gouge / Skid Trench Marks (prints permanent dark ruts as plane plows ground!)
-  const gougeTex = createGougeMarkTexture();
-  const gougeMat = new THREE.MeshBasicMaterial({
-    map: gougeTex,
-    transparent: true,
-    opacity: 0.9,
-    depthWrite: false,
-    polygonOffset: true,
-    polygonOffsetFactor: -3,
+  const smT=createSoftParticleTexture('smoke'),glT=createSoftParticleTexture('glow');
+  const pool=Array.from({length:180},()=>{
+    const m=new T.SpriteMaterial({map:smT,color:'#fff',transparent:true,opacity:0,depthWrite:false}),sp=new T.Sprite(m);
+    sp.visible=false;scene.add(sp);return {sp,m,l:0,mx:1,v:v3(),g:0,s0:2,s1:8,o:.7};
   });
-  const gougeGeo = new THREE.PlaneGeometry(5.6, 8.2);
-  gougeGeo.rotateX(-Math.PI / 2);
-  const gougePool = [];
-  for (let i = 0; i < 96; i++) {
-    const m = new THREE.Mesh(gougeGeo, gougeMat);
-    m.visible = false;
-    scene.add(m);
-    gougePool.push(m);
-  }
-  let gougeCursor = 0;
-  let lastGougePos = null;
-  const UP_VEC = new THREE.Vector3(0, 1, 0);
+  let cur=0,dC=0,gC=0,lastG=null,fC=0,bI=0;
 
-  function stampGroundGouge(wx, wz, yawRad, scaleW = 1.0, scaleL = 1.0) {
-    const ty = sampleTerrainHeight(wx, wz);
-    if (ty < 0.25) return; // Never stamp dirt trenches on open water
-    const normal = sampleTerrainNormal(wx, wz);
-    const m = gougePool[gougeCursor++ % gougePool.length];
-    m.position.set(wx, ty + 0.22, wz);
-    const slopeQ = new THREE.Quaternion().setFromUnitVectors(UP_VEC, normal);
-    const yawQ = new THREE.Quaternion().setFromAxisAngle(UP_VEC, yawRad);
-    m.quaternion.copy(slopeQ).multiply(yawQ);
-    m.scale.set(scaleW, 1, scaleL);
-    m.visible = true;
-  }
-
-  function stampCrashGougeTrail(worldPos, headingDeg, lengthM = 34) {
-    const hRad = (-headingDeg * Math.PI) / 180;
-    const backX = Math.sin(hRad);
-    const backZ = Math.cos(hRad);
-    const steps = Math.max(4, Math.round(lengthM / 3.2));
-    for (let i = 0; i < steps; i++) {
-      const dist = 1.5 + i * 3.2;
-      const jitter = Math.sin(i * 1.7) * 0.45;
-      stampGroundGouge(worldPos.x + backX * dist + jitter, worldPos.z + backZ * dist - jitter, hRad, 0.95 + (i % 3) * 0.16, 1.1);
-    }
-  }
-
-  function clearDebris() {
-    for (const d of debrisList) {
-      d.life = 0;
-      d.mesh.visible = false;
-    }
-    for (const p of pool) {
-      p.life = 0;
-      p.sprite.visible = false;
-    }
-    for (const g of gougePool) {
-      g.visible = false;
-    }
-    lastGougePos = null;
-  }
-
-  function emitTouchdownSmoke(worldPos, quaternion, hard = false) {
-    const leftWheel = new THREE.Vector3(-1.75, -1.85, 0.5).applyQuaternion(quaternion).add(worldPos);
-    const rightWheel = new THREE.Vector3(1.75, -1.85, 0.5).applyQuaternion(quaternion).add(worldPos);
-    const back = new THREE.Vector3(0, 0, 1).applyQuaternion(quaternion);
-
-    for (const wheel of [leftWheel, rightWheel]) {
-      for (let i = 0; i < (hard ? 7 : 4); i++) {
-        const spread = new THREE.Vector3(
-          (Math.random() - 0.5) * 2.4,
-          0.7 + Math.random() * 1.6,
-          (Math.random() - 0.5) * 2.4,
-        ).addScaledVector(back, 2.5 + i * 1.6);
-        emitSprite({
-          pos: wheel.clone().addScaledVector(back, i * 0.9),
-          vel: spread,
-          color: hard && i % 2 === 0 ? '#ff9933' : '#f1f5f9',
-          life: 1.0 + Math.random() * 0.5,
-          startScale: 1.9,
-          endScale: hard ? 7.5 : 5.4,
-          opacity: hard ? 0.72 : 0.54,
-          additive: hard && i % 2 === 0,
-        });
-      }
-    }
-  }
-
-  function emitWaterSplash(worldPos, intensity = 1.0) {
-    // Organic multi-stage ocean crash splash: asymmetric arching spray jets + foaming surface ring + drifting sea mist
-    for (let i = 0; i < 34; i++) {
-      const ang = (i / 34) * Math.PI * 2 + (Math.random() - 0.5) * 0.45;
-      const isTallJet = i % 4 === 0;
-      const spd = (isTallJet ? 4 + Math.random() * 7 : 8 + Math.random() * 14) * intensity;
-      emitSprite({
-        pos: new THREE.Vector3(
-          worldPos.x + Math.cos(ang) * (1.5 + Math.random() * 5.5),
-          0.4 + Math.random() * 1.4,
-          worldPos.z + Math.sin(ang) * (1.5 + Math.random() * 5.5),
-        ),
-        vel: new THREE.Vector3(
-          Math.cos(ang) * spd,
-          (isTallJet ? 13 + Math.random() * 12 : 4.5 + Math.random() * 7.5) * intensity,
-          Math.sin(ang) * spd,
-        ),
-        gravity: isTallJet ? -18 : -11,
-        color: i % 3 === 0 ? '#d2f2ff' : i % 3 === 1 ? '#ffffff' : '#9ad8eb',
-        life: (isTallJet ? 1.55 : 1.15) + Math.random() * 0.7,
-        startScale: isTallJet ? 2.4 : 3.6,
-        endScale: isTallJet ? 9.5 : 14.5,
-        opacity: isTallJet ? 0.88 : 0.68,
-      });
-    }
-  }
-
-  let debrisCursor = 0;
-
-  function emitShedParts(worldPos, velocity, floorY, count = 3) {
-    // Progressive part shedding while plowing rapidly across ground (prop blades, cowling, wingtip fragments!)
-    for (let i = 0; i < count; i++) {
-      const d = debrisList[debrisCursor++ % debrisList.length];
-      const ang = Math.random() * Math.PI * 2;
-      const kick = 3.5 + Math.random() * 8.5;
-      d.mesh.position.copy(worldPos).add(new THREE.Vector3((Math.random() - 0.5) * 4.2, 0.5 + Math.random() * 0.9, (Math.random() - 0.5) * 4.2));
-      d.vel.set(velocity.x * 0.45 + Math.cos(ang) * kick, 3.2 + Math.random() * 5.2, velocity.z * 0.45 + Math.sin(ang) * kick);
-      d.rotVel.set((Math.random() - 0.5) * 11, (Math.random() - 0.5) * 11, (Math.random() - 0.5) * 11);
-      d.life = 8.0;
-      d.floorY = floorY + 0.15;
-      d.mesh.visible = true;
-    }
-  }
-
-  function emitRoaringFireBurst(worldPos, quaternion, floorY, isWater = false, severity = 'catastrophic') {
-    if (isWater) {
-      // Water crash: ZERO fire! Massive hydro-impact water geysers + expanding white steam cloud only!
-      emitWaterSplash(worldPos, 1.45);
-      for (let i = 0; i < 14; i++) {
-        emitSprite({
-          pos: new THREE.Vector3(
-            worldPos.x + (Math.random() - 0.5) * 8,
-            1.0 + Math.random() * 2.5,
-            worldPos.z + (Math.random() - 0.5) * 8,
-          ),
-          vel: new THREE.Vector3((Math.random() - 0.5) * 3.5, 2.2 + Math.random() * 2.6, (Math.random() - 0.5) * 3.5),
-          color: '#e8f5fa',
-          life: 2.0 + Math.random() * 0.8,
-          startScale: 4.0,
-          endScale: 13.0,
-          opacity: 0.55,
-        });
-      }
-      return;
-    }
-
-    // Low-speed hard crash: NO instant massive explosion! Just localized engine smoke, small sparks & 4 minor parts.
-    if (severity === 'hard') {
-      emitShedParts(worldPos, new THREE.Vector3(0, 0, 0), floorY, 5);
-      for (let i = 0; i < 8; i++) {
-        emitSprite({
-          pos: worldPos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 3.2, 0.8 + i * 0.7, (Math.random() - 0.5) * 3.2)),
-          vel: new THREE.Vector3((Math.random() - 0.5) * 2.0, 2.5 + Math.random() * 2.2, (Math.random() - 0.5) * 2.0),
-          color: i < 2 ? '#ff8c2b' : '#2d333a',
-          life: 1.5 + Math.random() * 0.8,
-          startScale: 2.2,
-          endScale: 8.0,
-          opacity: i < 2 ? 0.85 : 0.62,
-          additive: i < 2,
-        });
-      }
-      return;
-    }
-
-    // Launch tumbling 3D wreckage debris shards on ground/mountain/tree/tower crash
-    if (!isWater) {
-      for (let i = 0; i < debrisList.length; i++) {
-        const d = debrisList[i];
-        const ang = (i / debrisList.length) * Math.PI * 2 + Math.random() * 0.4;
-        const speed = 6 + Math.random() * 15;
-        d.mesh.position.copy(worldPos).add(new THREE.Vector3((Math.random() - 0.5) * 4, 0.8 + Math.random() * 1.4, (Math.random() - 0.5) * 4));
-        d.vel.set(Math.cos(ang) * speed, 4.5 + Math.random() * 9.5, Math.sin(ang) * speed);
-        d.rotVel.set((Math.random() - 0.5) * 9, (Math.random() - 0.5) * 9, (Math.random() - 0.5) * 9);
-        d.life = 9.0;
-        d.floorY = floorY + 0.15;
-        d.mesh.visible = true;
-      }
-    }
-
-    // Multi-point roaring inferno (both engines + wing root + fuselage breach)
-    const fireAnchors = [
-      new THREE.Vector3(3.15, 1.0, -0.5),
-      new THREE.Vector3(1.6, 0.6, 0.3),
-      new THREE.Vector3(-2.6, 1.1, -0.8),
-      new THREE.Vector3(0.4, 0.9, -1.6),
-    ];
-
-    for (const localAnchor of fireAnchors) {
-      const origin = localAnchor.clone().applyQuaternion(quaternion).add(worldPos);
-      // 1. Bright incandescent yellow-white flame core
-      for (let i = 0; i < 4; i++) {
-        emitSprite({
-          pos: origin.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.4, i * 0.65, (Math.random() - 0.5) * 1.4)),
-          vel: new THREE.Vector3((Math.random() - 0.5) * 1.6, 2.8 + Math.random() * 2.0, (Math.random() - 0.5) * 1.6),
-          color: i < 2 ? '#fff0a6' : '#ff991a',
-          life: 0.7 + Math.random() * 0.4,
-          startScale: 2.8 + Math.random() * 1.4,
-          endScale: 5.5,
-          opacity: 0.95,
-          additive: true,
-        });
-      }
-      // 2. Deep orange-crimson roaring flame tongues
-      for (let i = 0; i < 6; i++) {
-        emitSprite({
-          pos: origin.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2.2, 0.8 + i * 0.95, (Math.random() - 0.5) * 2.2)),
-          vel: new THREE.Vector3((Math.random() - 0.5) * 2.2, 4.2 + Math.random() * 2.8, (Math.random() - 0.5) * 2.2),
-          color: i % 2 === 0 ? '#ff5900' : '#e02401',
-          life: 0.9 + Math.random() * 0.5,
-          startScale: 3.4 + Math.random() * 1.6,
-          endScale: 7.4,
-          opacity: 0.9,
-          additive: true,
-        });
-      }
-      // 3. Thick rolling black-charcoal smoke column rising above the fire
-      for (let i = 0; i < 7; i++) {
-        const t = i / 7;
-        emitSprite({
-          pos: origin.clone().add(new THREE.Vector3(-t * 2.8 + (Math.random() - 0.5) * 2.4, 2.8 + t * 14.5, -t * 2.8 + (Math.random() - 0.5) * 2.4)),
-          vel: new THREE.Vector3(-1.2, 3.2 + Math.random() * 1.6, -1.2),
-          color: i < 2 ? '#3d2a22' : '#1f252b',
-          life: 2.2 + Math.random() * 1.0,
-          startScale: 4.0 + t * 4.5,
-          endScale: 12.0 + t * 5.0,
-          opacity: 0.72 * (1 - t * 0.25),
-        });
-      }
-    }
-  }
-
-  // 3. Wingtip Vortex Ribbon Contrails
-  const TRAIL_POINTS = 28;
-  function makeTrailRibbon() {
-    const geo = new THREE.BufferGeometry();
-    const positions = new Float32Array(TRAIL_POINTS * 3);
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const mat = new THREE.LineBasicMaterial({ color: '#f4f9fc', transparent: true, opacity: 0.48 });
-    const line = new THREE.Line(geo, mat);
-    line.frustumCulled = false;
-    scene.add(line);
-    return { line, positions, mat, filled: false };
-  }
-  const leftTrail = makeTrailRibbon();
-  const rightTrail = makeTrailRibbon();
-
-  function seedWingtipTrails(flightState) {
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(flightState.quaternion);
-    const tips = [
-      { trail: leftTrail, local: new THREE.Vector3(-8.55, 2.0, -0.1) },
-      { trail: rightTrail, local: new THREE.Vector3(8.55, 2.0, -0.1) },
-    ];
-    for (const { trail, local } of tips) {
-      const tipWorld = local.clone().applyQuaternion(flightState.quaternion).add(flightState.position);
-      for (let i = 0; i < TRAIL_POINTS; i++) {
-        const p = tipWorld.clone().addScaledVector(forward, -i * 2.1);
-        trail.positions[i * 3] = p.x;
-        trail.positions[i * 3 + 1] = p.y;
-        trail.positions[i * 3 + 2] = p.z;
-      }
-      trail.line.geometry.attributes.position.needsUpdate = true;
-      trail.filled = true;
-    }
-  }
-
-  function updateWingtipTrails(flightState, visible) {
-    const show = visible && !flightState.onGround && flightState.status === 'flying' && flightState.airspeedKts > 78;
-    leftTrail.line.visible = show;
-    rightTrail.line.visible = show;
-    if (!show) return;
-
-    const alpha = Math.min(0.55, 0.14 + Math.abs(flightState.rollDeg) * 0.015 + Math.max(0, flightState.gLoad - 1) * 0.25);
-    leftTrail.mat.opacity = alpha;
-    rightTrail.mat.opacity = alpha;
-
-    const pairs = [
-      [leftTrail, new THREE.Vector3(-8.55, 2.0, -0.1)],
-      [rightTrail, new THREE.Vector3(8.55, 2.0, -0.1)],
-    ];
-    for (const [trail, local] of pairs) {
-      const tipWorld = local.clone().applyQuaternion(flightState.quaternion).add(flightState.position);
-      if (!trail.filled) {
-        for (let i = 0; i < TRAIL_POINTS; i++) {
-          trail.positions[i * 3] = tipWorld.x;
-          trail.positions[i * 3 + 1] = tipWorld.y;
-          trail.positions[i * 3 + 2] = tipWorld.z;
-        }
-        trail.filled = true;
-      } else {
-        for (let i = TRAIL_POINTS - 1; i > 0; i--) {
-          trail.positions[i * 3] = trail.positions[(i - 1) * 3];
-          trail.positions[i * 3 + 1] = trail.positions[(i - 1) * 3 + 1];
-          trail.positions[i * 3 + 2] = trail.positions[(i - 1) * 3 + 2];
-        }
-        trail.positions[0] = tipWorld.x;
-        trail.positions[1] = tipWorld.y;
-        trail.positions[2] = tipWorld.z;
-      }
-      trail.line.geometry.attributes.position.needsUpdate = true;
-    }
-  }
-
-  // 4. Storm Rain Streaks (Mission 4)
-  const RAIN_COUNT = 260;
-  const rainGeo = new THREE.BufferGeometry();
-  const rainPos = new Float32Array(RAIN_COUNT * 6);
-  const rainOffsets = [];
-  for (let i = 0; i < RAIN_COUNT; i++) {
-    rainOffsets.push({
-      x: (Math.random() - 0.5) * 60,
-      y: (Math.random() - 0.5) * 36,
-      z: (Math.random() - 0.5) * 60,
-    });
-  }
-  rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-  const rainLines = new THREE.LineSegments(
-    rainGeo,
-    new THREE.LineBasicMaterial({ color: '#c4dce8', transparent: true, opacity: 0.42 }),
-  );
-  rainLines.visible = false;
-  rainLines.frustumCulled = false;
-  scene.add(rainLines);
-
-  let fireEmitClock = 0;
-  let splashBubbleClock = 0;
-
-  function updateEffects(dt, timeSec, flightState, cameraPos, rainIntensity, isCockpitView) {
-    // Continuous roaring fire ONLY on dry high-energy crashes — low-speed hard crashes only emit dark engine smoke & light embers, NEVER water fire!
-    const inWaterCrash = flightState.crashMode === 'water';
-    const isCatastrophicFire = flightState.status === 'crashed' && flightState.crashSeverity !== 'hard';
-    const hasEngineSmoke =
-      flightState.status === 'crashed' ||
-      flightState.hullPct < 68 ||
-      flightState.engineHealth < 68 ||
-      flightState.malfunctions?.leftEngineOut;
-    const onFire = !inWaterCrash && hasEngineSmoke;
-
-    if (inWaterCrash) {
-      // Rising white foam bubbles & surface steam while sinking beneath ocean waves (ZERO flames!)
-      fireEmitClock += dt;
-      if (fireEmitClock >= 0.065) {
-        fireEmitClock = 0;
-        splashBubbleClock += 1;
-        emitSprite({
-          pos: new THREE.Vector3(
-            flightState.position.x + (Math.random() - 0.5) * 7,
-            0.35,
-            flightState.position.z + (Math.random() - 0.5) * 7,
-          ),
-          vel: new THREE.Vector3((Math.random() - 0.5) * 2.0, 1.6 + Math.random() * 1.8, (Math.random() - 0.5) * 2.0),
-          color: splashBubbleClock % 2 === 0 ? '#eef9ff' : '#c2dce6',
-          life: 1.6,
-          startScale: 2.6,
-          endScale: 9.2,
-          opacity: 0.52,
-        });
-      }
-    } else if (onFire) {
-      fireEmitClock += dt;
-      const rate = flightState.status === 'crashed' ? 0.032 : 0.055;
-      if (fireEmitClock >= rate) {
-        fireEmitClock = 0;
-        const anchor =
-          flightState.status === 'crashed' && Math.random() < 0.45
-            ? new THREE.Vector3(-2.4 + Math.random() * 5.2, 0.8, -1.2 + Math.random() * 2.0)
-            : new THREE.Vector3(3.15, 0.9, -0.35);
-        const worldPt = anchor.applyQuaternion(flightState.quaternion).add(flightState.position);
-
-        if (isCatastrophicFire || (flightState.status !== 'crashed' && flightState.hullPct < 45)) {
-          emitSprite({
-            pos: worldPt.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.2, 0.2, (Math.random() - 0.5) * 1.2)),
-            vel: new THREE.Vector3((Math.random() - 0.5) * 2.4, 4.4 + Math.random() * 3.0, (Math.random() - 0.5) * 2.4),
-            color: Math.random() < 0.35 ? '#fff0a6' : Math.random() < 0.7 ? '#ff6a00' : '#d9260a',
-            life: 0.48 + Math.random() * 0.3,
-            startScale: 2.6 + Math.random() * 1.6,
-            endScale: 6.4,
-            opacity: 0.94,
-            additive: true,
-          });
-        }
-
-        emitSprite({
-          pos: worldPt.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.4, 1.2, (Math.random() - 0.5) * 1.4)),
-          vel: new THREE.Vector3((Math.random() - 0.5) * 2.5, 4.2 + Math.random() * 2.4, (Math.random() - 0.5) * 2.5),
-          color: '#22282e',
-          life: 2.1,
-          startScale: 3.0,
-          endScale: 12.5,
-          opacity: 0.68,
-        });
-      }
-    }
-
-    // Continuous Ground Plowing Gouge Marks + Flying Dirt Clods + Metallic Scraping Sparks while skidding on land!
-    if (flightState.status === 'crashed' && flightState.crashMode === 'ground') {
-      const horizSpeed = Math.hypot(flightState.velocity.x, flightState.velocity.z);
-      const groundY = sampleTerrainHeight(flightState.position.x, flightState.position.z);
-      if (groundY > 0.25 && flightState.position.y <= groundY + 3.2 && horizSpeed > 1.2) {
-        const distSinceLast = lastGougePos
-          ? Math.hypot(flightState.position.x - lastGougePos.x, flightState.position.z - lastGougePos.z)
-          : 99;
-        if (distSinceLast >= 2.1) {
-          const slideYaw = Math.atan2(-flightState.velocity.x, -flightState.velocity.z);
-          stampGroundGouge(flightState.position.x, flightState.position.z, slideYaw, 1.05, 1.15);
-          // Secondary wingtip gouge track on right/left side
-          const wingPt = new THREE.Vector3(4.8, 0, 0).applyQuaternion(flightState.quaternion).add(flightState.position);
-          stampGroundGouge(wingPt.x, wingPt.z, slideYaw, 0.55, 0.9);
-          lastGougePos = flightState.position.clone();
-
-          // Speed-dependent progressive part shedding while plowing fast across terrain!
-          if (horizSpeed > 9.5) {
-            emitShedParts(flightState.position, flightState.velocity, groundY, horizSpeed > 18 ? 3 : 1);
-          }
-
-          // Kick up dark earth/dust plumes & bright orange-yellow metallic grinding sparks!
-          for (let k = 0; k < 3; k++) {
-            emitSprite({
-              pos: new THREE.Vector3(
-                flightState.position.x + (Math.random() - 0.5) * 4.5,
-                groundY + 0.6,
-                flightState.position.z + (Math.random() - 0.5) * 4.5,
-              ),
-              vel: new THREE.Vector3(
-                -flightState.velocity.x * 0.25 + (Math.random() - 0.5) * 5.5,
-                2.5 + Math.random() * 4.2,
-                -flightState.velocity.z * 0.25 + (Math.random() - 0.5) * 5.5,
-              ),
-              gravity: -9.5,
-              color: k === 0 ? '#ffc44d' : '#524030',
-              life: k === 0 ? 0.38 : 1.35,
-              startScale: k === 0 ? 1.5 : 2.8,
-              endScale: k === 0 ? 2.6 : 9.2,
-              opacity: k === 0 ? 0.95 : 0.72,
-              additive: k === 0,
-            });
-          }
-        }
-      }
-    }
-
-    // Step soft sprite particles
-    for (const p of pool) {
-      if (p.life <= 0) continue;
-      p.life -= dt;
-      if (p.life <= 0) {
-        p.sprite.visible = false;
-        continue;
-      }
-      const ratio = 1 - p.life / p.maxLife;
-      if (p.gravity !== 0) p.vel.y += p.gravity * dt;
-      p.sprite.position.addScaledVector(p.vel, dt);
-      const sc = p.startScale + (p.endScale - p.startScale) * ratio;
-      p.sprite.scale.setScalar(sc);
-      p.mat.opacity = p.baseOpacity * (1 - ratio * ratio);
-    }
-
-    // Step physical 3D wreckage debris shards
-    for (const d of debrisList) {
-      if (d.life <= 0) continue;
-      d.life -= dt;
-      if (d.life <= 0) {
-        d.mesh.visible = false;
-        continue;
-      }
-      d.vel.y -= 18 * dt;
-      d.mesh.position.addScaledVector(d.vel, dt);
-      if (d.mesh.position.y < d.floorY) {
-        d.mesh.position.y = d.floorY;
-        d.vel.y = Math.abs(d.vel.y) > 1.5 ? -d.vel.y * 0.35 : 0;
-        d.vel.x *= Math.max(0, 1 - dt * 4.5);
-        d.vel.z *= Math.max(0, 1 - dt * 4.5);
-        d.rotVel.multiplyScalar(Math.max(0, 1 - dt * 5.0));
-      }
-      d.mesh.rotation.x += d.rotVel.x * dt;
-      d.mesh.rotation.y += d.rotVel.y * dt;
-      d.mesh.rotation.z += d.rotVel.z * dt;
-    }
-
-    updateWingtipTrails(flightState, !isCockpitView);
-
-    const hasRain = rainIntensity > 0.05;
-    rainLines.visible = hasRain;
-    if (hasRain) {
-      rainLines.material.opacity = 0.26 + rainIntensity * 0.3;
-      const fall = (timeSec * (30 + rainIntensity * 16)) % 36;
-      const slant = 0.3 + rainIntensity * 0.55;
-      for (let i = 0; i < RAIN_COUNT; i++) {
-        const o = rainOffsets[i];
-        const rx = cameraPos.x + o.x;
-        const ry = cameraPos.y + ((o.y - fall + 54) % 36) - 18;
-        const rz = cameraPos.z + o.z;
-        const idx = i * 6;
-        rainPos[idx] = rx;
-        rainPos[idx + 1] = ry;
-        rainPos[idx + 2] = rz;
-        rainPos[idx + 3] = rx - slant;
-        rainPos[idx + 4] = ry - 2.4;
-        rainPos[idx + 5] = rz - slant * 0.6;
-      }
-      rainGeo.attributes.position.needsUpdate = true;
-    }
-  }
-
-  return {
-    clearDebris,
-    emitSprite,
-    emitTouchdownSmoke,
-    emitWaterSplash,
-    emitRoaringFireBurst,
-    stampCrashGougeTrail,
-    seedWingtipTrails,
-    updateEffects,
+  const emit=(p,v,cl='#eef2f6',l=1.4,s0=2,s1=7.5,o=.65,g=0,ad=false)=>{
+    const e=pool[cur++%180];e.sp.position.copy(p);e.sp.scale.setScalar(s0);e.sp.visible=true;
+    e.m.map=ad?glT:smT;e.m.blending=ad?T.AdditiveBlending:T.NormalBlending;
+    e.m.color.set(cl);e.m.opacity=e.o=o;e.l=e.mx=l;e.v.copy(v);e.g=g;e.s0=s0;e.s1=s1;
   };
+
+  const dCl=['#e55320','#13495e','#f3ede0','#242c34','#f5ab29'];
+  const deb=Array.from({length:16},(_,i)=>{
+    const m=new T.Mesh(new T.BoxGeometry(.45+(i%3)*.45,.14+(i%2)*.12,.75+(i%4)*.35),new T.MeshStandardMaterial({color:dCl[i%5],roughness:.55,metalness:.35}));
+    m.visible=false;m.castShadow=true;scene.add(m);return {m,v:v3(),rv:v3(),l:0,fy:0};
+  });
+  const gM=new T.MeshBasicMaterial({map:createGougeMarkTexture(),transparent:true,opacity:.9,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-3}),gG=new T.PlaneGeometry(5.6,8.2).rotateX(-PI/2);
+  const ggs=Array.from({length:96},()=>{const m=new T.Mesh(gG,gM);m.visible=false;scene.add(m);return m;});
+
+  const stamp=(wx,wz,yw,sx=1,sz=1)=>{
+    const ty=sH(wx,wz);if(ty<.25)return;
+    const m=ggs[gC++%96];m.position.set(wx,ty+.22,wz);
+    m.quaternion.setFromUnitVectors(UP,sN(wx,wz)).multiply(new T.Quaternion().setFromAxisAngle(UP,yw));m.scale.set(sx,1,sz);m.visible=true;
+  };
+
+  function stampCrashGougeTrail(wp, hdg, len = 34) {
+    const hr=(-hdg*PI)/180;
+    for(let i=0,n=MX(4,Math.round(len/3.2));i<n;i++){const d=1.5+i*3.2,j=S(i*1.7)*.45;stamp(wp.x+S(hr)*d+j,wp.z+C(hr)*d-j,hr,.95+(i%3)*.16,1.1);}
+  }
+
+  function clearDebris() {deb.forEach((d)=>{d.l=0;d.m.visible=false;});pool.forEach((p)=>{p.l=0;p.sp.visible=false;});ggs.forEach((g)=>{g.visible=false;});lastG=null;}
+
+  function emitTouchdownSmoke(wp, q, hd = false) {
+    const bk=v3(0,0,1).applyQuaternion(q);
+    for(const wx of [-1.75,1.75]){
+      const wh=v3(wx,-1.85,.5).applyQuaternion(q).add(wp);
+      for(let i=0;i<(hd?7:4);i++){const k=hd&&i%2===0;emit(wh.clone().addScaledVector(bk,i*.9),v3(rn(2.4),.7+R()*1.6,rn(2.4)).addScaledVector(bk,2.5+i*1.6),k?'#ff9933':'#f1f5f9',1+R()*.5,1.9,hd?7.5:5.4,hd?.72:.54,0,k);}
+    }
+  }
+
+  function emitWaterSplash(wp, int = 1) {
+    for(let i=0;i<34;i++){
+      const a=(i/34)*PI*2+rn(.45),t=i%4===0,s=(t?4+R()*7:8+R()*14)*int;
+      emit(v3(wp.x+C(a)*(1.5+R()*5.5),.4+R()*1.4,wp.z+S(a)*(1.5+R()*5.5)),v3(C(a)*s,(t?13+R()*12:4.5+R()*7.5)*int,S(a)*s),['#d2f2ff','#fff','#9ad8eb'][i%3],(t?1.55:1.15)+R()*.7,t?2.4:3.6,t?9.5:14.5,t?.88:.68,t?-18:-11);
+    }
+  }
+
+  const shed=(wp,vel,fy,n=3,b=false)=>{
+    for(let i=0;i<n;i++){
+      const d=b?deb[i]:deb[dC++%16],a=b?(i/n)*PI*2+R()*.4:R()*PI*2,s=b?6+R()*15:3.5+R()*8.5;
+      d.m.position.copy(jit(wp,4.2,.6+R()*1.2,4.2));d.v.set((b?0:vel.x*.45)+C(a)*s,(b?4.5:3.2)+R()*(b?9.5:5.2),(b?0:vel.z*.45)+S(a)*s);
+      d.rv.set(rn(10),rn(10),rn(10));d.l=b?9:8;d.fy=fy+.15;d.m.visible=true;
+    }
+  };
+
+  function emitRoaringFireBurst(wp, q, fy, isW = false, sev = 'catastrophic') {
+    if(isW){emitWaterSplash(wp,1.45);for(let i=0;i<14;i++)emit(v3(wp.x+rn(8),1+R()*2.5,wp.z+rn(8)),v3(rn(3.5),2.2+R()*2.6,rn(3.5)),'#e8f5fa',2+R()*.8,4,13,.55);return;}
+    if(sev==='hard'){shed(wp,v3(),fy,5);for(let i=0;i<8;i++)emit(jit(wp,3.2,.8+i*.7,3.2),v3(rn(2),2.5+R()*2.2,rn(2)),i<2?'#ff8c2b':'#2d333a',1.5+R()*.8,2.2,8,i<2?.85:.62,0,i<2);return;}
+    shed(wp,v3(),fy,16,true);
+    for(const anc of [v3(3.15,1,-.5),v3(1.6,.6,.3),v3(-2.6,1.1,-.8),v3(.4,.9,-1.6)]){
+      const o=anc.applyQuaternion(q).add(wp);
+      for(let i=0;i<4;i++)emit(jit(o,1.4,i*.65,1.4),v3(rn(1.6),2.8+R()*2,rn(1.6)),i<2?'#fff0a6':'#ff991a',.7+R()*.4,2.8+R()*1.4,5.5,.95,0,true);
+      for(let i=0;i<6;i++)emit(jit(o,2.2,.8+i*.95,2.2),v3(rn(2.2),4.2+R()*2.8,rn(2.2)),i%2?'#e02401':'#ff5900',.9+R()*.5,3.4+R()*1.6,7.4,.9,0,true);
+      for(let i=0;i<7;i++){const t=i/7;emit(o.clone().add(v3(-t*2.8+rn(2.4),2.8+t*14.5,-t*2.8+rn(2.4))),v3(-1.2,3.2+R()*1.6,-1.2),i<2?'#3d2a22':'#1f252b',2.2+R(),4+t*4.5,12+t*5,.72*(1-t*.25));}
+    }
+  }
+
+  const TP=28,trails=[v3(-8.55,2,-.1),v3(8.55,2,-.1)].map((loc)=>{
+    const pos=new Float32Array(TP*3),mat=new T.LineBasicMaterial({color:'#f4f9fc',transparent:true,opacity:.48}),line=new T.Line(new T.BufferGeometry().setAttribute('position',new T.BufferAttribute(pos,3)),mat);
+    line.frustumCulled=false;scene.add(line);return {line,pos,mat,loc,ok:false};
+  });
+
+  function seedWingtipTrails(s) {
+    const fwd=v3(0,0,-1).applyQuaternion(s.quaternion);
+    for(const tr of trails){const tip=tr.loc.clone().applyQuaternion(s.quaternion).add(s.position);for(let i=0;i<TP;i++){const p=tip.clone().addScaledVector(fwd,-i*2.1);tr.pos.set([p.x,p.y,p.z],i*3);}tr.line.geometry.attributes.position.needsUpdate=true;tr.ok=true;}
+  }
+
+  const RN=260,rP=new Float32Array(RN*6),rO=Array.from({length:RN},()=>[rn(60),rn(36),rn(60)]);
+  const rG=new T.BufferGeometry().setAttribute('position',new T.BufferAttribute(rP,3)),rL=new T.LineSegments(rG,new T.LineBasicMaterial({color:'#c4dce8',transparent:true,opacity:.42}));
+  rL.visible=rL.frustumCulled=false;scene.add(rL);
+
+  function updateEffects(dt, tS, s, cP, rain, isC) {
+    const inW=s.crashMode==='water',cat=s.status==='crashed'&&s.crashSeverity!=='hard';
+    if(inW){if((fC+=dt)>=.065){fC=0;emit(v3(s.position.x+rn(7),.35,s.position.z+rn(7)),v3(rn(2),1.6+R()*1.8,rn(2)),++bI%2?'#c2dce6':'#eef9ff',1.6,2.6,9.2,.52);}}
+    else if(s.status==='crashed'||s.hullPct<68||s.engineHealth<68||s.malfunctions?.leftEngineOut){
+      if((fC+=dt)>=(s.status==='crashed'?.032:.055)){
+        fC=0;const wp=(s.status==='crashed'&&R()<.45?v3(-2.4+R()*5.2,.8,-1.2+R()*2):v3(3.15,.9,-.35)).applyQuaternion(s.quaternion).add(s.position);
+        if(cat||(s.status!=='crashed'&&s.hullPct<45))emit(jit(wp,1.2,.2,1.2),v3(rn(2.4),4.4+R()*3,rn(2.4)),R()<.35?'#fff0a6':R()<.7?'#ff6a00':'#d9260a',.48+R()*.3,2.6+R()*1.6,6.4,.94,0,true);
+        emit(jit(wp,1.4,1.2,1.4),v3(rn(2.5),4.2+R()*2.4,rn(2.5)),'#22282e',2.1,3,12.5,.68);
+      }
+    }
+    if(s.status==='crashed'&&s.crashMode==='ground'){
+      const hs=HY(s.velocity.x,s.velocity.z),gy=sH(s.position.x,s.position.z);
+      if(gy>.25&&s.position.y<=gy+3.2&&hs>1.2&&(!lastG||HY(s.position.x-lastG.x,s.position.z-lastG.z)>=2.1)){
+        const yw=Math.atan2(-s.velocity.x,-s.velocity.z),wg=v3(4.8,0,0).applyQuaternion(s.quaternion).add(s.position);
+        stamp(s.position.x,s.position.z,yw,1.05,1.15);stamp(wg.x,wg.z,yw,.55,.9);lastG=s.position.clone();
+        if(hs>9.5)shed(s.position,s.velocity,gy,hs>18?3:1);
+        for(let k=0;k<3;k++)emit(v3(s.position.x+rn(4.5),gy+.6,s.position.z+rn(4.5)),v3(-s.velocity.x*.25+rn(5.5),2.5+R()*4.2,-s.velocity.z*.25+rn(5.5)),k?'#524030':'#ffc44d',k?1.35:.38,k?2.8:1.5,k?9.2:2.6,k?.72:.95,-9.5,!k);
+      }
+    }
+    for(const p of pool){if(p.l<=0)continue;if((p.l-=dt)<=0){p.sp.visible=false;continue;}const r=1-p.l/p.mx;if(p.g)p.v.y+=p.g*dt;p.sp.position.addScaledVector(p.v,dt);p.sp.scale.setScalar(p.s0+(p.s1-p.s0)*r);p.m.opacity=p.o*(1-r*r);}
+    for(const d of deb){
+      if(d.l<=0)continue;if((d.l-=dt)<=0){d.m.visible=false;continue;}
+      d.v.y-=18*dt;d.m.position.addScaledVector(d.v,dt);
+      if(d.m.position.y<d.fy){d.m.position.y=d.fy;d.v.y=A(d.v.y)>1.5?-d.v.y*.35:0;const f=MX(0,1-dt*4.5);d.v.x*=f;d.v.z*=f;d.rv.multiplyScalar(MX(0,1-dt*5));}
+      d.m.rotation.x+=d.rv.x*dt;d.m.rotation.y+=d.rv.y*dt;d.m.rotation.z+=d.rv.z*dt;
+    }
+    const sh=!isC&&!s.onGround&&s.status==='flying'&&s.airspeedKts>78,al=MN(.55,.14+A(s.rollDeg)*.015+MX(0,s.gLoad-1)*.25);
+    for(const tr of trails){
+      tr.line.visible=sh;if(!sh)continue;tr.mat.opacity=al;
+      const tip=tr.loc.clone().applyQuaternion(s.quaternion).add(s.position);
+      if(!tr.ok){for(let i=0;i<TP;i++)tr.pos.set([tip.x,tip.y,tip.z],i*3);tr.ok=true;}else{tr.pos.copyWithin(3,0,(TP-1)*3);tr.pos.set([tip.x,tip.y,tip.z],0);}
+      tr.line.geometry.attributes.position.needsUpdate=true;
+    }
+    rL.visible=rain>.05;
+    if(rL.visible){
+      rL.material.opacity=.26+rain*.3;const fl=(tS*(30+rain*16))%36,sl=.3+rain*.55;
+      for(let i=0;i<RN;i++){const [ox,oy,oz]=rO[i],rx=cP.x+ox,ry=cP.y+((oy-fl+54)%36)-18,rz=cP.z+oz;rP.set([rx,ry,rz,rx-sl,ry-2.4,rz-sl*.6],i*6);}
+      rG.attributes.position.needsUpdate=true;
+    }
+  }
+  return {clearDebris,emitTouchdownSmoke,emitWaterSplash,emitRoaringFireBurst,stampCrashGougeTrail,seedWingtipTrails,updateEffects};
 }

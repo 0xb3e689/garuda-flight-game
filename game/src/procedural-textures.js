@@ -1,516 +1,113 @@
-// Offline procedural canvas textures for Garuda G-4 fuselage rivets & livery, airfoil wings,
-// weathered runways, volcanic terrain detail, crinkle-enamel cockpit metal, and soft sprite particles.
+// Offline procedural canvas textures for fuselage rivets, wings, terrain albedo/normals, clouds, foliage, cockpit metal, sprites, and runways.
+import * as T from 'three';
 
-import * as THREE from 'three';
+const {PI,sin:S,cos:C,floor:F,round:R,hypot:H}=Math,P2=PI*2;
+const rng=(s)=>()=>(((s=(s*1664525+1013904223)>>>0))/4294967296);
+const fGr=(x,g,st,a,b,w,h)=>{st.forEach(([t,c])=>g.addColorStop(t,c));x.fillStyle=g;x.fillRect(a,b,w,h);};
+const fR=(x,c,a,b,w,h)=>{x.fillStyle=c;x.fillRect(a,b,w,h);};
+const dot=(x,a,b,r,f)=>{x.fillStyle=f;x.beginPath();x.arc(a,b,r,0,P2);x.fill();};
+const ln=(x,a,b,c,d)=>{x.beginPath();x.moveTo(a,b);x.lineTo(c,d);x.stroke();};
 
-function seededRand(seed) {
-  let s = seed >>> 0;
-  return () => {
-    s = (s * 1664525 + 1013904223) >>> 0;
-    return s / 4294967296;
-  };
+function makeTex(w, h, draw, {srgb=true,rep=null,an=0} = {}) {
+  const cv=Object.assign(document.createElement('canvas'),{width:w,height:h});draw(cv.getContext('2d'),w,h);
+  const t=new T.CanvasTexture(cv);if(srgb)t.colorSpace=T.SRGBColorSpace;
+  if(rep){t.wrapS=t.wrapT=T.RepeatWrapping;if(rep!==true)t.repeat.set(rep[0],rep[1]);}
+  if(an)t.anisotropy=an;return t;
 }
 
 export function createAircraftSkinTexture() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
-  const rng = seededRand(4041);
-
-  // Warm weathered ivory upper fuselage
-  const baseGrad = ctx.createLinearGradient(0, 0, 0, 512);
-  baseGrad.addColorStop(0, '#f7f2e6');
-  baseGrad.addColorStop(0.54, '#ebe3d2');
-  baseGrad.addColorStop(0.56, '#d9cfc0');
-  baseGrad.addColorStop(1, '#0e3c4f');
-  ctx.fillStyle = baseGrad;
-  ctx.fillRect(0, 0, 1024, 512);
-
-  // Brushed aluminum panel shading variation
-  for (let i = 0; i < 16; i++) {
-    const px = i * 64;
-    ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.035)' : 'rgba(15,30,40,0.035)';
-    ctx.fillRect(px, 0, 64, 512);
-  }
-
-  // Deep ocean-teal amphibious hull belly
-  ctx.fillStyle = '#12495e';
-  ctx.fillRect(0, 316, 1024, 196);
-
-  // Garuda vermilion & burnished gold swept cheatlines
-  ctx.fillStyle = '#e55320';
-  ctx.fillRect(0, 272, 1024, 34);
-  ctx.fillStyle = '#f5ab29';
-  ctx.fillRect(0, 250, 1024, 16);
-  ctx.fillStyle = '#1b5f78';
-  ctx.fillRect(0, 306, 1024, 12);
-
-  // Panel seam lines & aircraft rivet rows
-  ctx.strokeStyle = 'rgba(28, 38, 46, 0.28)';
-  ctx.lineWidth = 2;
-  for (let x = 64; x < 1024; x += 64) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, 512);
-    ctx.stroke();
-
-    ctx.fillStyle = 'rgba(30, 42, 52, 0.36)';
-    for (let y = 18; y < 500; y += 22) {
-      ctx.fillRect(x - 6, y, 2, 2);
-      ctx.fillRect(x + 4, y, 2, 2);
-    }
-  }
-  for (const y of [118, 248, 320, 420]) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(1024, y);
-    ctx.stroke();
-  }
-
-  // Subtle exhaust & salt-spray weathering streaks
-  for (let i = 0; i < 120; i++) {
-    ctx.fillStyle = `rgba(24, 30, 36, ${0.02 + rng() * 0.04})`;
-    ctx.fillRect(rng() * 1024, 240 + rng() * 160, 24 + rng() * 60, 2 + rng() * 4);
-  }
-
-  // Crisp aviation registration stencil
-  ctx.fillStyle = '#143344';
-  ctx.font = 'bold 48px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('GARUDA  PK-GRD', 530, 212);
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
-  return tex;
+  return makeTex(1024,512,(x)=>{
+    const r=rng(4041);fGr(x,x.createLinearGradient(0,0,0,512),[[0,'#f7f2e6'],[.54,'#ebe3d2'],[.56,'#d9cfc0'],[1,'#0e3c4f']],0,0,1024,512);
+    for(let i=0;i<16;i++)fR(x,i%2?'rgba(15,30,40,.035)':'rgba(255,255,255,.035)',i*64,0,64,512);
+    [['#12495e',316,196],['#e55320',272,34],['#f5ab29',250,16],['#1b5f78',306,12]].forEach(([c,y,h])=>fR(x,c,0,y,1024,h));
+    x.strokeStyle='rgba(28,38,46,.28)';x.lineWidth=2;
+    for(let px=64;px<1024;px+=64){ln(x,px,0,px,512);x.fillStyle='rgba(30,42,52,.36)';for(let y=18;y<500;y+=22){x.fillRect(px-6,y,2,2);x.fillRect(px+4,y,2,2);}}
+    [118,248,320,420].forEach((y)=>ln(x,0,y,1024,y));
+    for(let i=0;i<120;i++)fR(x,`rgba(24,30,36,${.02+r()*.04})`,r()*1024,240+r()*160,24+r()*60,2+r()*4);
+    x.fillStyle='#143344';x.font='bold 48px monospace';x.textAlign='center';x.fillText('GARUDA  PK-GRD',530,212);
+  },{an:8});
 }
 
 export function createWingTexture() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
-
-  ctx.fillStyle = '#eee7d8';
-  ctx.fillRect(0, 0, 512, 512);
-
-  // Leading-edge black pneumatic de-icing boot
-  ctx.fillStyle = '#20272e';
-  ctx.fillRect(0, 0, 512, 54);
-  ctx.fillStyle = '#38434e';
-  ctx.fillRect(0, 52, 512, 6);
-
-  // Wing rib panel lines & inspection hatches
-  ctx.strokeStyle = 'rgba(30, 42, 52, 0.25)';
-  ctx.lineWidth = 2;
-  for (let x = 32; x < 512; x += 48) {
-    ctx.beginPath();
-    ctx.moveTo(x, 58);
-    ctx.lineTo(x, 512);
-    ctx.stroke();
-  }
-  for (const y of [170, 320, 430]) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(512, y);
-    ctx.stroke();
-  }
-
-  // High-visibility vermilion & gold rescue wing bands
-  ctx.fillStyle = '#e55320';
-  ctx.fillRect(0, 58, 72, 454);
-  ctx.fillRect(440, 58, 72, 454);
-  ctx.fillStyle = '#f5ab29';
-  ctx.fillRect(72, 58, 22, 454);
-  ctx.fillRect(418, 58, 22, 454);
-
-  // Registration & NO STEP stencil
-  ctx.fillStyle = '#15384a';
-  ctx.font = 'bold 42px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('PK-GRD', 256, 250);
-  ctx.strokeStyle = '#c0392b';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(160, 340, 192, 52);
-  ctx.fillStyle = '#c0392b';
-  ctx.font = 'bold 18px monospace';
-  ctx.fillText('NO STEP', 256, 372);
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
-  return tex;
+  return makeTex(512,512,(x)=>{
+    [['#eee7d8',0,0,512,512],['#20272e',0,0,512,54],['#38434e',0,52,512,6],['#e55320',0,58,72,454],['#e55320',440,58,72,454],['#f5ab29',72,58,22,454],['#f5ab29',418,58,22,454]].forEach((a)=>fR(x,...a));
+    x.strokeStyle='rgba(30,42,52,.25)';x.lineWidth=2;
+    for(let px=32;px<512;px+=48)ln(x,px,58,px,512);
+    [170,320,430].forEach((y)=>ln(x,0,y,512,y));
+    x.fillStyle='#15384a';x.font='bold 42px monospace';x.textAlign='center';x.fillText('PK-GRD',256,250);
+    x.strokeStyle=x.fillStyle='#c0392b';x.lineWidth=3;x.strokeRect(160,340,192,52);x.font='bold 18px monospace';x.fillText('NO STEP',256,372);
+  },{an:8});
 }
 
 export function createTerrainDetailTexture() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 1024;
-  const ctx = canvas.getContext('2d');
-  const rng = seededRand(90210);
-
-  ctx.fillStyle = '#dad9d3';
-  ctx.fillRect(0, 0, 1024, 1024);
-
-  // Layered micro-foliage tufts, volcanic scree speckles & sunlit ridges
-  for (let i = 0; i < 14000; i++) {
-    const x = rng() * 1024;
-    const y = rng() * 1024;
-    const r = 1.2 + rng() * 11;
-    const v = rng();
-    ctx.fillStyle =
-      v > 0.62
-        ? 'rgba(255,253,242,0.11)'
-        : v > 0.25
-          ? 'rgba(28,42,30,0.11)'
-          : 'rgba(72,58,44,0.09)';
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Volcanic rock strata & eroded gully lines
-  for (let y = 0; y < 1024; y += 16) {
-    ctx.strokeStyle = y % 32 === 0 ? 'rgba(32, 38, 34, 0.12)' : 'rgba(255, 250, 236, 0.08)';
-    ctx.lineWidth = 2.2;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    for (let x = 0; x <= 1024; x += 48) {
-      ctx.lineTo(x, y + Math.sin(x * 0.025 + y * 0.06) * 7 + Math.cos(x * 0.07 - y * 0.03) * 3);
-    }
-    ctx.stroke();
-  }
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(42, 42);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
-  return tex;
+  return makeTex(1024,1024,(x)=>{
+    const r=rng(90210);fR(x,'#dad9d3',0,0,1024,1024);
+    for(let i=0;i<14000;i++){const v=r();dot(x,r()*1024,r()*1024,1.2+r()*11,v>.62?'rgba(255,253,242,.11)':v>.25?'rgba(28,42,30,.11)':'rgba(72,58,44,.09)');}
+    x.lineWidth=2.2;
+    for(let y=0;y<1024;y+=16){x.strokeStyle=y%32?'rgba(255,250,236,.08)':'rgba(32,38,34,.12)';x.beginPath();x.moveTo(0,y);for(let px=0;px<=1024;px+=48)x.lineTo(px,y+S(px*.025+y*.06)*7+C(px*.07-y*.03)*3);x.stroke();}
+  },{rep:[42,42],an:8});
 }
 
 export function createTerrainNormalMap() {
-  const size = 512;
-  const height = new Float32Array(size * size);
-  const rng = seededRand(51517);
-
-  // Build seamless tileable multi-frequency height grid for crisp rock/grass bump lighting
-  const grid = new Float32Array(64 * 64);
-  for (let i = 0; i < grid.length; i++) grid[i] = rng();
-
-  const sampleTile = (u, v, freq) => {
-    const x = ((u * freq) % 64 + 64) % 64;
-    const y = ((v * freq) % 64 + 64) % 64;
-    const ix = Math.floor(x);
-    const iy = Math.floor(y);
-    const fx = x - ix;
-    const fy = y - iy;
-    const ux = fx * fx * (3 - 2 * fx);
-    const uy = fy * fy * (3 - 2 * fy);
-    const ix1 = (ix + 1) & 63;
-    const iy1 = (iy + 1) & 63;
-    const a = grid[iy * 64 + ix];
-    const b = grid[iy * 64 + ix1];
-    const c = grid[iy1 * 64 + ix];
-    const d = grid[iy1 * 64 + ix1];
-    return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
-  };
-
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const u = x / size;
-      const v = y / size;
-      const h =
-        sampleTile(u, v, 8) * 0.5 +
-        sampleTile(u, v, 16) * 0.28 +
-        sampleTile(u, v, 32) * 0.14 +
-        sampleTile(u, v, 64) * 0.08 +
-        Math.sin(v * Math.PI * 16 + sampleTile(u, v, 8) * 4) * 0.09;
-      height[y * size + x] = h;
+  return makeTex(512,512,(x,sz)=>{
+    const r=rng(51517),gd=Float32Array.from({length:4096},()=>r());
+    const sm=(u,v,fq)=>{
+      const a=((u*fq)%64+64)%64,b=((v*fq)%64+64)%64,ix=F(a),iy=F(b),fx=a-ix,fy=b-iy,ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy),i1=(ix+1)&63,j1=(iy+1)&63;
+      const p0=gd[iy*64+ix],p1=gd[iy*64+i1],p2=gd[j1*64+ix],p3=gd[j1*64+i1];return p0+(p1-p0)*ux+(p2-p0)*uy+(p0-p1-p2+p3)*ux*uy;
+    };
+    const hm=new Float32Array(sz*sz);
+    for(let y=0;y<sz;y++)for(let px=0;px<sz;px++){const u=px/sz,v=y/sz;hm[y*sz+px]=sm(u,v,8)*.5+sm(u,v,16)*.28+sm(u,v,32)*.14+sm(u,v,64)*.08+S(v*PI*16+sm(u,v,8)*4)*.09;}
+    const im=x.createImageData(sz,sz);
+    for(let y=0;y<sz;y++)for(let px=0;px<sz;px++){
+      const dx=(hm[y*sz+((px+1)%sz)]-hm[y*sz+((px-1+sz)%sz)])*5.5,dy=(hm[((y+1)%sz)*sz+px]-hm[((y-1+sz)%sz)*sz+px])*5.5,l=H(dx,dy,1),i=(y*sz+px)*4;
+      im.data[i]=R(((-dx/l)*.5+.5)*255);im.data[i+1]=R(((-dy/l)*.5+.5)*255);im.data[i+2]=R(((1/l)*.5+.5)*255);im.data[i+3]=255;
     }
-  }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  const img = ctx.createImageData(size, size);
-  const strength = 5.5;
-
-  for (let y = 0; y < size; y++) {
-    const ym = (y - 1 + size) % size;
-    const yp = (y + 1) % size;
-    for (let x = 0; x < size; x++) {
-      const xm = (x - 1 + size) % size;
-      const xp = (x + 1) % size;
-      const dx = (height[y * size + xp] - height[y * size + xm]) * strength;
-      const dy = (height[yp * size + x] - height[ym * size + x]) * strength;
-      const len = Math.hypot(dx, dy, 1.0);
-      const idx = (y * size + x) * 4;
-      img.data[idx] = Math.round(((-dx / len) * 0.5 + 0.5) * 255);
-      img.data[idx + 1] = Math.round(((-dy / len) * 0.5 + 0.5) * 255);
-      img.data[idx + 2] = Math.round(((1.0 / len) * 0.5 + 0.5) * 255);
-      img.data[idx + 3] = 255;
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(42, 42);
-  tex.anisotropy = 8;
-  return tex;
+    x.putImageData(im,0,0);
+  },{srgb:false,rep:[42,42],an:8});
 }
 
 export function createCloudPuffTexture() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
-  const ctx = canvas.getContext('2d');
-  const rng = seededRand(88123);
-
-  // Fluffy painted cumulus cloud sprite with warm sunlit crown and cool shadowed base
-  const lobes = [
-    [128, 134, 86, '#9cb0c4', 0.42],
-    [92, 146, 62, '#9aaec2', 0.38],
-    [164, 146, 64, '#9aaec2', 0.38],
-    [128, 114, 78, '#fff7ec', 0.68],
-    [84, 124, 58, '#fff3e2', 0.62],
-    [172, 124, 58, '#fff3e2', 0.62],
-    [114, 92, 54, '#ffffff', 0.72],
-    [148, 96, 48, '#fffcf5', 0.68],
-  ];
-  for (let i = 0; i < 12; i++) {
-    const lx = 68 + rng() * 120;
-    const ly = 82 + rng() * 76;
-    const lr = 26 + rng() * 34;
-    lobes.push([lx, ly, lr, ly < 124 ? '#ffffff' : '#cfdbe6', 0.28 + rng() * 0.22]);
-  }
-
-  for (const [cx, cy, r, hex, alpha] of lobes) {
-    const g = ctx.createRadialGradient(cx, cy - r * 0.15, r * 0.08, cx, cy, r);
-    g.addColorStop(0, hex);
-    g.addColorStop(0.58, hex);
-    g.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
+  return makeTex(256,256,(x)=>{
+    const r=rng(88123),lb=[[128,134,86,'#9cb0c4',.42],[92,146,62,'#9aaec2',.38],[164,146,64,'#9aaec2',.38],[128,114,78,'#fff7ec',.68],[84,124,58,'#fff3e2',.62],[172,124,58,'#fff3e2',.62],[114,92,54,'#fff',.72],[148,96,48,'#fffcf5',.68]];
+    for(let i=0;i<12;i++){const ly=82+r()*76;lb.push([68+r()*120,ly,26+r()*34,ly<124?'#fff':'#cfdbe6',.28+r()*.22]);}
+    for(const [cx,cy,rd,hx,a] of lb){const g=x.createRadialGradient(cx,cy-rd*.15,rd*.08,cx,cy,rd);g.addColorStop(0,hx);g.addColorStop(.58,hx);g.addColorStop(1,'rgba(255,255,255,0)');x.globalAlpha=a;dot(x,cx,cy,rd,g);}
+    x.globalAlpha=1;
+  });
 }
 
 export function createFoliageTexture() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
-  const ctx = canvas.getContext('2d');
-  const rng = seededRand(31415);
-
-  ctx.fillStyle = '#2d6338';
-  ctx.fillRect(0, 0, 256, 256);
-
-  // Overlapping leafy clusters for organic non-plastic tree canopy shading
-  for (let i = 0; i < 650; i++) {
-    const x = rng() * 256;
-    const y = rng() * 256;
-    const r = 4 + rng() * 13;
-    const v = rng();
-    ctx.fillStyle = v > 0.66 ? '#4f9148' : v > 0.33 ? '#2c6536' : '#1b4326';
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  return tex;
+  return makeTex(256,256,(x)=>{const r=rng(31415);fR(x,'#2d6338',0,0,256,256);for(let i=0;i<650;i++){const v=r();dot(x,r()*256,r()*256,4+r()*13,v>.66?'#4f9148':v>.33?'#2c6536':'#1b4326');}},{rep:true});
 }
 
 export function createCockpitMetalTexture() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
-  const rng = seededRand(7721);
-
-  const grad = ctx.createLinearGradient(0, 0, 512, 512);
-  grad.addColorStop(0, '#2a343f');
-  grad.addColorStop(0.5, '#1d252d');
-  grad.addColorStop(1, '#26303b');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 512, 512);
-
-  // Aviation crinkle-coat enamel grain
-  for (let i = 0; i < 6000; i++) {
-    const x = rng() * 512;
-    const y = rng() * 512;
-    ctx.fillStyle = rng() > 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.12)';
-    ctx.fillRect(x, y, 2, 2);
-  }
-
-  // Brushed metallic seam highlights & rivets
-  ctx.strokeStyle = 'rgba(145, 175, 195, 0.22)';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(10, 10, 492, 492);
-  ctx.fillStyle = 'rgba(180, 205, 220, 0.35)';
-  for (let i = 28; i < 500; i += 44) {
-    ctx.beginPath();
-    ctx.arc(i, 20, 2.8, 0, Math.PI * 2);
-    ctx.arc(i, 492, 2.8, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  return tex;
+  return makeTex(512,512,(x)=>{
+    const r=rng(7721);fGr(x,x.createLinearGradient(0,0,512,512),[[0,'#2a343f'],[.5,'#1d252d'],[1,'#26303b']],0,0,512,512);
+    for(let i=0;i<6000;i++)fR(x,r()>.5?'rgba(255,255,255,.05)':'rgba(0,0,0,.12)',r()*512,r()*512,2,2);
+    x.strokeStyle='rgba(145,175,195,.22)';x.lineWidth=2;x.strokeRect(10,10,492,492);
+    for(let i=28;i<500;i+=44){dot(x,i,20,2.8,'rgba(180,205,220,.35)');dot(x,i,492,2.8,'rgba(180,205,220,.35)');}
+  },{rep:true});
 }
 
-export function createSoftParticleTexture(kind = 'smoke') {
-  const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-
-  if (kind === 'glow') {
-    const g = ctx.createRadialGradient(64, 64, 2, 64, 64, 62);
-    g.addColorStop(0, 'rgba(255,255,255,1)');
-    g.addColorStop(0.28, 'rgba(255,245,215,0.72)');
-    g.addColorStop(0.65, 'rgba(255,200,120,0.22)');
-    g.addColorStop(1, 'rgba(255,180,90,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 128, 128);
-  } else if (kind === 'prop') {
-    // Swept translucent spinning propeller blur disc
-    const g = ctx.createRadialGradient(64, 64, 8, 64, 64, 62);
-    g.addColorStop(0, 'rgba(30,36,44,0.45)');
-    g.addColorStop(0.45, 'rgba(215,228,236,0.28)');
-    g.addColorStop(0.84, 'rgba(248,184,48,0.48)');
-    g.addColorStop(0.95, 'rgba(248,184,48,0.65)');
-    g.addColorStop(1, 'rgba(248,184,48,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 128, 128);
-
-    // Three faint motion-blurred blade wedges
-    ctx.save();
-    ctx.translate(64, 64);
-    for (let i = 0; i < 3; i++) {
-      ctx.rotate((Math.PI * 2) / 3);
-      ctx.fillStyle = 'rgba(20, 26, 34, 0.28)';
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, 60, -0.18, 0.18);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
-  } else {
-    // Multi-lobe soft billowing smoke puff
-    const blobs = [
-      [64, 64, 48, 0.72],
-      [48, 56, 34, 0.45],
-      [80, 58, 32, 0.45],
-      [62, 78, 36, 0.42],
-    ];
-    for (const [bx, by, br, alpha] of blobs) {
-      const g = ctx.createRadialGradient(bx, by, 3, bx, by, br);
-      g.addColorStop(0, `rgba(255,255,255,${alpha})`);
-      g.addColorStop(0.55, `rgba(245,248,252,${alpha * 0.48})`);
-      g.addColorStop(1, 'rgba(245,248,252,0)');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(bx, by, br, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
+export function createSoftParticleTexture(k = 'smoke') {
+  return makeTex(128,128,(x)=>{
+    if(k==='glow')fGr(x,x.createRadialGradient(64,64,2,64,64,62),[[0,'rgba(255,255,255,1)'],[.28,'rgba(255,245,215,.72)'],[.65,'rgba(255,200,120,.22)'],[1,'rgba(255,180,90,0)']],0,0,128,128);
+    else if(k==='prop'){
+      fGr(x,x.createRadialGradient(64,64,8,64,64,62),[[0,'rgba(30,36,44,.45)'],[.45,'rgba(215,228,236,.28)'],[.84,'rgba(248,184,48,.48)'],[.95,'rgba(248,184,48,.65)'],[1,'rgba(248,184,48,0)']],0,0,128,128);
+      x.save();x.translate(64,64);x.fillStyle='rgba(20,26,34,.28)';for(let i=0;i<3;i++){x.rotate(P2/3);x.beginPath();x.moveTo(0,0);x.arc(0,0,60,-.18,.18);x.fill();}x.restore();
+    }else for(const [bx,by,br,a] of [[64,64,48,.72],[48,56,34,.45],[80,58,32,.45],[62,78,36,.42]]){const g=x.createRadialGradient(bx,by,3,bx,by,br);g.addColorStop(0,`rgba(255,255,255,${a})`);g.addColorStop(.55,`rgba(245,248,252,${a*.48})`);g.addColorStop(1,'rgba(245,248,252,0)');dot(x,bx,by,br,g);}
+  });
 }
 
-export function createHighResRunwayTexture(codeA, codeB) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 2048;
-  const ctx = canvas.getContext('2d');
-  const rng = seededRand(codeA.charCodeAt(0) * 97 + codeB.charCodeAt(0));
-
-  // Rich weathered asphalt tarmac
-  ctx.fillStyle = '#282e35';
-  ctx.fillRect(0, 0, 512, 2048);
-
-  // Asphalt aggregate texture
-  for (let i = 0; i < 2400; i++) {
-    const px = rng() * 512;
-    const py = rng() * 2048;
-    const a = 0.03 + rng() * 0.06;
-    ctx.fillStyle = rng() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(0,0,0,${a * 1.8})`;
-    ctx.fillRect(px, py, 2 + rng() * 8, 8 + rng() * 28);
-  }
-
-  // Heavy dark rubber touchdown zone deposits
-  for (const y0 of [210, 1460]) {
-    const grad = ctx.createLinearGradient(0, y0, 0, y0 + 380);
-    grad.addColorStop(0, 'rgba(10,12,15,0)');
-    grad.addColorStop(0.45, 'rgba(10,12,15,0.58)');
-    grad.addColorStop(1, 'rgba(10,12,15,0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(108, y0, 296, 380);
-  }
-
-  // Crisp runway markings
-  ctx.fillStyle = '#eef2f6';
-  ctx.fillRect(20, 28, 12, 1992);
-  ctx.fillRect(480, 28, 12, 1992);
-
-  // Centerline dashes
-  for (let y = 290; y < 1760; y += 108) {
-    ctx.fillRect(249, y, 14, 56);
-  }
-
-  // Threshold piano keys (8 bold bars)
-  for (let i = 0; i < 8; i++) {
-    const x = 52 + i * 54;
-    if (i === 3 || i === 4) {
-      // slight center gap
-    }
-    ctx.fillRect(x, 42, 30, 118);
-    ctx.fillRect(x, 1888, 30, 118);
-  }
-
-  // Aiming point blocks + touchdown zone bars
-  ctx.fillRect(104, 345, 48, 126);
-  ctx.fillRect(360, 345, 48, 126);
-  ctx.fillRect(104, 1577, 48, 126);
-  ctx.fillRect(360, 1577, 48, 126);
-
-  // Runway designation numbers
-  ctx.fillStyle = '#f4f7fa';
-  ctx.font = 'bold 104px monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(codeA, 256, 1785);
-  ctx.save();
-  ctx.translate(256, 260);
-  ctx.rotate(Math.PI);
-  ctx.fillText(codeB, 0, 0);
-  ctx.restore();
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.anisotropy = 8;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
+export function createHighResRunwayTexture(cA, cB) {
+  return makeTex(512,2048,(x)=>{
+    const r=rng(cA.charCodeAt(0)*97+cB.charCodeAt(0));fR(x,'#282e35',0,0,512,2048);
+    for(let i=0;i<2400;i++){const a=.03+r()*.06;fR(x,r()>.5?`rgba(255,255,255,${a})`:`rgba(0,0,0,${a*1.8})`,r()*512,r()*2048,2+r()*8,8+r()*28);}
+    [210,1460].forEach((y0)=>fGr(x,x.createLinearGradient(0,y0,0,y0+380),[[0,'rgba(10,12,15,0)'],[.45,'rgba(10,12,15,.58)'],[1,'rgba(10,12,15,0)']],108,y0,296,380));
+    x.fillStyle='#eef2f6';x.fillRect(20,28,12,1992);x.fillRect(480,28,12,1992);
+    for(let y=290;y<1760;y+=108)x.fillRect(249,y,14,56);
+    for(let i=0;i<8;i++){x.fillRect(52+i*54,42,30,118);x.fillRect(52+i*54,1888,30,118);}
+    [[104,345],[360,345],[104,1577],[360,1577]].forEach(([a,b])=>x.fillRect(a,b,48,126));
+    x.fillStyle='#f4f7fa';x.font='bold 104px monospace';x.textAlign='center';x.textBaseline='middle';
+    x.fillText(cA,256,1785);x.save();x.translate(256,260);x.rotate(PI);x.fillText(cB,0,0);x.restore();
+  },{an:8});
 }
