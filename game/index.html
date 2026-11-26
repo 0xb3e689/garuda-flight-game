@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Garuda — Archipelago Flight & Rescue Sim</title>
+    <link rel="stylesheet" href="./styles/hud.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three.module.min.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <canvas id="flight-canvas" aria-label="Garuda 3D flight viewport"></canvas>
+    <canvas id="hud-canvas" aria-hidden="true"></canvas>
+
+    <button id="open-briefing-btn" type="button">SORTIES [H]</button>
+
+    <dialog id="briefing-dialog" aria-labelledby="briefing-title" closedby="any">
+      <div class="briefing-header">
+        <div>
+          <h1 id="briefing-title">GARUDA G-4 · SORTIE BRIEFING</h1>
+          <p class="briefing-sub">Twin-Turboprop Archipelago Utility &amp; Maritime Rescue Simulator</p>
+        </div>
+      </div>
+
+      <div id="mission-list" class="mission-grid"></div>
+
+      <div class="controls-bar">
+        <strong>FLIGHT CONTROLS:</strong>
+        W/S or ↑/↓ Pitch · A/D or ←/→ Roll (or hold Left-Mouse Yoke) · Q/E Rudder · Shift/Ctrl Throttle (110% TOGA) ·
+        F Flaps (0°/15°/30°) · G Gear · B Wheel Brakes · Space Supply Drop · C Chase/3D Cockpit · R Restart · M Mute
+      </div>
+
+      <div class="briefing-actions">
+        <button id="resume-flight-btn" type="button" autofocus>FLY CURRENT SORTIE</button>
+      </div>
+    </dialog>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

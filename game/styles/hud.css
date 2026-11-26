@@ -1,0 +1,197 @@
+/* Garuda — Aviation HUD & Native Sortie Briefing Dialog Styling */
+
+:root {
+  color-scheme: dark;
+  --panel-bg: rgba(11, 18, 26, 0.94);
+  --panel-border: rgba(88, 224, 210, 0.42);
+  --accent-cyan: #38f2d4;
+  --accent-amber: #ffbe4f;
+  --accent-coral: #ff6b3d;
+  --text-main: #edf6f9;
+  --text-dim: #9db7c4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #0b1622;
+  color: var(--text-main);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  overflow: hidden;
+  user-select: none;
+}
+
+#flight-canvas,
+#hud-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#hud-canvas {
+  pointer-events: none;
+}
+
+#open-briefing-btn {
+  position: fixed;
+  top: 18px;
+  left: 276px;
+  z-index: 10;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: rgba(10, 17, 24, 0.82);
+  color: var(--accent-amber);
+  font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+#open-briefing-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--text-main);
+}
+
+/* Native modal dialog — display scoped to [open] and scroll contained per modern web guidance */
+dialog#briefing-dialog {
+  padding: 0;
+  border: 1.5px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  color: var(--text-main);
+  max-width: 720px;
+  width: calc(100vw - 32px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65);
+}
+
+dialog#briefing-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+dialog#briefing-dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog#briefing-dialog::backdrop {
+  background: rgba(4, 10, 16, 0.68);
+  backdrop-filter: blur(5px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  dialog#briefing-dialog {
+    transition: opacity 0.18s ease-out, transform 0.18s ease-out, display 0.18s allow-discrete, overlay 0.18s allow-discrete;
+  }
+  @starting-style {
+    dialog#briefing-dialog[open] {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+}
+
+.briefing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px 12px;
+  border-bottom: 1px solid rgba(120, 180, 195, 0.22);
+}
+
+.briefing-header h1 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  color: var(--accent-amber);
+}
+
+.briefing-sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.mission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px 22px;
+}
+
+.mission-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 9px;
+  border: 1px solid rgba(110, 190, 200, 0.3);
+  background: rgba(18, 29, 40, 0.9);
+  color: var(--text-main);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.mission-card:hover,
+.mission-card:focus-visible {
+  border-color: var(--accent-amber);
+  background: rgba(26, 42, 56, 0.96);
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
+.mission-badge {
+  color: var(--accent-cyan);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.mission-meta {
+  color: var(--accent-amber);
+  font-size: 10.5px;
+}
+
+.mission-desc {
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.controls-bar {
+  padding: 10px 22px;
+  background: rgba(8, 14, 20, 0.72);
+  border-top: 1px solid rgba(120, 180, 195, 0.18);
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.briefing-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 22px 16px;
+}
+
+#resume-flight-btn {
+  padding: 9px 18px;
+  border-radius: 7px;
+  border: 1px solid var(--accent-cyan);
+  background: rgba(56, 242, 212, 0.16);
+  color: var(--text-main);
+  font: 700 12px/1 inherit;
+  cursor: pointer;
+}
+
+#resume-flight-btn:hover {
+  background: rgba(56, 242, 212, 0.3);
+}
