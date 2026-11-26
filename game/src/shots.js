@@ -1,56 +1,60 @@
-// Deterministic ?shot= showcase scene setups so every captured screenshot is a real,
-// unmodified render of Garuda's 3D engine, physics telemetry, cockpit gauges, and HUD.
+// Deterministic ?shot= showcase scene setups for Garuda's 4 real browser screenshots.
 
-import * as THREE from 'three';
 import { resetFlightState } from './flight-physics.js';
 
-export function applyShotPreset(shotName, { flightState, missionManager, world, aircraft, cockpit, cameraRig, hud }) {
+export function applyShotPreset(
+  shotName,
+  { flightState, missionManager, world, aircraft, cockpit, cameraRig, effects, hud, camera },
+) {
+  cameraRig.setChaseLateralBias(0);
+  effects.clearDebris();
+
   if (shotName === 'chase') {
-    // Shot 1 (Cover): Golden-hour chase view on Mission 1 approaching Gate 01 -> Merpati RWY 36,
-    // right on the STOL glideslope (2 white / 2 red PAPI!), framing aircraft, target ring, runway, village, lighthouse & bridge!
     const mission = missionManager.loadMission(0);
     world.setAtmospherePreset(mission.atmosphere);
     resetFlightState(flightState, {
-      x: 16,
-      y: 65,
-      z: 745,
-      headingDeg: 357,
-      pitchDeg: -2.5,
-      rollDeg: -10,
-      speedKts: 114,
-      throttle: 0.68,
+      x: -10,
+      y: 62,
+      z: 705,
+      headingDeg: 356,
+      pitchDeg: -2.2,
+      rollDeg: -12,
+      speedKts: 118,
+      throttle: 0.72,
       flapStage: 1,
       gearDown: true,
       fuelPct: 82,
       hullPct: 100,
       engineHealth: 100,
     });
-    flightState.vsiMps = -3.1;
-    flightState.controlSurface.aileron = -0.35;
+    flightState.vsiMps = -2.8;
+    flightState.controlSurface.aileron = -0.32;
     flightState.controlSurface.flaps = 15;
     cameraRig.setMode('chase');
+    cameraRig.setChaseLateralBias(-3.6);
     aircraft.updateAircraftModel(flightState, 0.016, 4.2, true);
-    world.updateWorld(0.016, 4.2, flightState.position, mission.wind);
+    world.updateWorld(0.016, 4.2, flightState.position, mission.wind, flightState.quaternion);
     cameraRig.updateCamera(flightState, 0.016, true);
-    cockpit.updateCockpit(flightState, 358, false);
-    hud.showBanner('APPROACHING GATE 01 · ON GLIDESLOPE MERPATI RWY 36', 'good', 5);
+    effects.seedWingtipTrails(flightState);
+    effects.updateEffects(0.016, 4.2, flightState, camera.position, 0, false);
+    cockpit.updateCockpit(flightState, 358, false, false, 4.2, 0);
     return true;
   }
 
   if (shotName === 'cockpit') {
-    // Shot 2: True 3D Cockpit View inside Garuda G-4 with full illuminated 6-pack gauges, HSI & annunciators,
-    // flying through Gunung Kawah volcanic canyon toward the glowing aerial ring on Mission 2!
     const mission = missionManager.loadMission(1);
+    missionManager.setShowcaseProgress(1, 200);
+    missionManager.spawnShowcaseParachute(-945, 298, -1355);
     world.setAtmospherePreset(mission.atmosphere);
     resetFlightState(flightState, {
-      x: -565,
-      y: 256,
-      z: -945,
+      x: -745,
+      y: 302,
+      z: -1155,
       headingDeg: 316,
-      pitchDeg: -2,
-      rollDeg: 10,
+      pitchDeg: -1.5,
+      rollDeg: 9,
       speedKts: 126,
-      throttle: 0.78,
+      throttle: 0.76,
       flapStage: 1,
       gearDown: false,
       fuelPct: 21,
@@ -58,29 +62,28 @@ export function applyShotPreset(shotName, { flightState, missionManager, world, 
       engineHealth: 95,
     });
     flightState.lowFuel = true;
-    flightState.controlSurface.aileron = 0.38;
+    flightState.controlSurface.aileron = 0.36;
     flightState.controlSurface.flaps = 15;
     cameraRig.setMode('cockpit');
     aircraft.updateAircraftModel(flightState, 0.016, 6.4, false);
-    world.updateWorld(0.016, 6.4, flightState.position, mission.wind);
+    world.updateWorld(0.016, 6.4, flightState.position, mission.wind, flightState.quaternion);
     cameraRig.updateCamera(flightState, 0.016, true);
-    cockpit.updateCockpit(flightState, 316, true, true);
+    effects.updateEffects(0.016, 6.4, flightState, camera.position, 0, true);
+    cockpit.updateCockpit(flightState, 316, true, true, 6.4, 0);
     return true;
   }
 
   if (shotName === 'landing') {
-    // Shot 3: Dusk crosswind flare on Karang Cliffside Strip RWY 09 —
-    // aligned on the STOL glideslope (2 white / 2 red PAPI visible ahead!), gear down, flaps 30 deg, windsock, tire smoke!
     const mission = missionManager.loadMission(2);
     missionManager.setShowcaseProgress(2, 400);
     world.setAtmospherePreset(mission.atmosphere);
     resetFlightState(flightState, {
-      x: 942,
-      y: 77.0,
+      x: 946,
+      y: 76.2,
       z: -1250,
       headingDeg: 86,
       pitchDeg: 4.5,
-      rollDeg: -3.0,
+      rollDeg: -3.2,
       speedKts: 72,
       throttle: 0.24,
       flapStage: 2,
@@ -93,59 +96,67 @@ export function applyShotPreset(shotName, { flightState, missionManager, world, 
     flightState.controlSurface.flaps = 30;
     flightState.controlSurface.rudder = 0.35;
     cameraRig.setMode('chase');
-    aircraft.spawnTouchdownPuff(new THREE.Vector3(944, 71.2, -1250), false);
+    cameraRig.setChaseLateralBias(-3.2);
     aircraft.updateAircraftModel(flightState, 0.05, 8.1, true);
-    world.updateWorld(0.05, 8.1, flightState.position, mission.wind);
+    world.updateWorld(0.05, 8.1, flightState.position, mission.wind, flightState.quaternion);
     cameraRig.updateCamera(flightState, 0.05, true);
-    cockpit.updateCockpit(flightState, 90, false);
-    hud.showBanner('FLARE RWY 09 · CROSSWIND 18 KT · FLAPS 30° · GEAR DOWN', 'info', 5);
+    effects.emitTouchdownSmoke(flightState.position, flightState.quaternion, false);
+    effects.updateEffects(0.05, 8.1, flightState, camera.position, 0, false);
+    cockpit.updateCockpit(flightState, 90, false, false, 8.1, 0);
+    hud.showBanner('FLARE RWY 09 · FLAPS 30°', 'info', 5);
     return true;
   }
 
   if (shotName === 'debrief') {
-    // Shot 4: Readable crash / emergency incident on Mission 4 (Storm Sea Rescue) —
-    // smoking Garuda G-4 cleanly framed left of the unobstructed diagnostic readout & 4-mission bar!
     const mission = missionManager.loadMission(3);
     missionManager.setShowcaseProgress(2, 400);
     world.setAtmospherePreset(mission.atmosphere);
     resetFlightState(flightState, {
       x: -760,
-      y: 9.85,
+      y: 10.35,
       z: 860,
       headingDeg: 48,
-      pitchDeg: -5,
-      rollDeg: 18,
+      pitchDeg: 0,
+      rollDeg: 11,
       speedKts: 0,
       throttle: 0,
       flapStage: 2,
       gearDown: true,
       fuelPct: 19,
-      hullPct: 18,
-      engineHealth: 15,
+      hullPct: 12,
+      engineHealth: 8,
       onGround: true,
     });
     flightState.status = 'crashed';
+    flightState.crashMode = 'ground';
+    flightState.crashSeverity = 'catastrophic';
+    flightState.propRpm = 0;
+    flightState.propRpmLeft = 0;
     flightState.gearIntact = false;
     flightState.incidentReport = {
       outcome: 'CRASHED',
       title: 'HARD LANDING — GEAR COLLAPSE',
-      detail: 'Touchdown sink -9.8 m/s (limit 4.6 m/s) at 79 kt, bank 19° in 24 kt storm gusts.',
+      detail: 'Sink -9.8 m/s (max 4.6) at 79 kt, bank 19°.',
       sinkMps: 9.8,
       speedKts: 79,
       bankDeg: 19,
       onRunway: true,
       fuelPct: 19,
-      hullPct: 18,
+      hullPct: 12,
     };
     cameraRig.setMode('orbit');
-    cameraRig.setCustomOrbitAngle(1.32);
-    for (let i = 0; i < 12; i++) {
-      aircraft.updateAircraftModel(flightState, 0.12, 10 + i * 0.12, true);
+    cameraRig.setCustomOrbitAngle(1.42);
+    // Step detached tail rigid-body physics for ~1.1s so the snapped tail visibly tumbles & lands away on the runway!
+    for (let k = 0; k < 28; k++) {
+      aircraft.updateAircraftModel(flightState, 0.04, 10.3 + k * 0.04, true);
     }
-    aircraft.spawnTouchdownPuff(new THREE.Vector3(-760, 9.6, 860), true);
-    world.updateWorld(0.05, 11.4, flightState.position, mission.wind);
+    world.updateWorld(0.05, 11.4, flightState.position, mission.wind, flightState.quaternion);
     cameraRig.updateCamera(flightState, 0.05, true);
-    cockpit.updateCockpit(flightState, 35, false);
+    effects.stampCrashGougeTrail(flightState.position, flightState.headingDeg, 36);
+    effects.emitRoaringFireBurst(flightState.position, flightState.quaternion, 8.5, false);
+    effects.emitTouchdownSmoke(flightState.position, flightState.quaternion, true);
+    effects.updateEffects(0.18, 11.58, flightState, camera.position, 1.0, false);
+    cockpit.updateCockpit(flightState, 35, false, false, 11.58, 1.0);
     return true;
   }
 

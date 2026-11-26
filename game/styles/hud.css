@@ -1,4 +1,4 @@
-/* Garuda — Aviation HUD & Native Sortie Briefing Dialog Styling */
+/* Garuda — Aviation HUD & Unified ESC Pause / Mission Dialog */
 
 :root {
   color-scheme: dark;
@@ -6,7 +6,6 @@
   --panel-border: rgba(88, 224, 210, 0.42);
   --accent-cyan: #38f2d4;
   --accent-amber: #ffbe4f;
-  --accent-coral: #ff6b3d;
   --text-main: #edf6f9;
   --text-dim: #9db7c4;
 }
@@ -40,36 +39,16 @@ body {
   pointer-events: none;
 }
 
-#open-briefing-btn {
-  position: fixed;
-  top: 18px;
-  left: 276px;
-  z-index: 10;
-  padding: 7px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--panel-border);
-  background: rgba(10, 17, 24, 0.82);
-  color: var(--accent-amber);
-  font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-}
-
-#open-briefing-btn:hover {
-  border-color: var(--accent-cyan);
-  color: var(--text-main);
-}
-
-/* Native modal dialog — display scoped to [open] and scroll contained per modern web guidance */
+/* Initial Flight Briefing / Onboarding Modal */
 dialog#briefing-dialog {
   padding: 0;
-  border: 1.5px solid var(--panel-border);
+  border: 1.5px solid rgba(255, 190, 79, 0.55);
   border-radius: 14px;
   background: var(--panel-bg);
   color: var(--text-main);
-  max-width: 720px;
+  max-width: 620px;
   width: calc(100vw - 32px);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.72);
 }
 
 dialog#briefing-dialog[open] {
@@ -77,11 +56,118 @@ dialog#briefing-dialog[open] {
   flex-direction: column;
 }
 
-dialog#briefing-dialog:modal {
+dialog#briefing-dialog::backdrop {
+  background: rgba(4, 10, 16, 0.52);
+  backdrop-filter: blur(4px);
+}
+
+.briefing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(120, 180, 195, 0.22);
+}
+
+.briefing-tag {
+  display: block;
+  font-size: 10.5px;
+  color: var(--accent-cyan);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin-bottom: 3px;
+}
+
+.briefing-header h1 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--accent-amber);
+}
+
+#launch-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1.5px solid var(--accent-cyan);
+  background: rgba(56, 242, 212, 0.2);
+  color: #ffffff;
+  font: 700 12px/1 inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#launch-btn:hover,
+#launch-btn:focus-visible {
+  background: rgba(56, 242, 212, 0.34);
+  outline: none;
+}
+
+.briefing-body {
+  padding: 14px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.briefing-goal {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 190, 79, 0.12);
+  border-left: 3px solid var(--accent-amber);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #fff6e0;
+}
+
+.briefing-steps-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent-cyan);
+}
+
+.key-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.key-grid kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  margin-right: 3px;
+  border-radius: 4px;
+  border: 1px solid rgba(120, 195, 205, 0.35);
+  background: rgba(22, 36, 48, 0.95);
+  color: #ffffff;
+  font: 700 10.5px/1.2 inherit;
+}
+
+/* Unified native ESC pause & mission modal dialog */
+dialog#pause-dialog {
+  padding: 0;
+  border: 1.5px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  color: var(--text-main);
+  max-width: 680px;
+  width: calc(100vw - 32px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.68);
+}
+
+dialog#pause-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+dialog#pause-dialog:modal {
   overscroll-behavior: contain;
 }
 
-dialog#briefing-dialog::backdrop {
+dialog#pause-dialog::backdrop {
   background: rgba(4, 10, 16, 0.68);
   backdrop-filter: blur(5px);
   overflow: hidden;
@@ -89,43 +175,65 @@ dialog#briefing-dialog::backdrop {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  dialog#briefing-dialog {
+  dialog#pause-dialog {
     transition: opacity 0.18s ease-out, transform 0.18s ease-out, display 0.18s allow-discrete, overlay 0.18s allow-discrete;
   }
   @starting-style {
-    dialog#briefing-dialog[open] {
+    dialog#pause-dialog[open] {
       opacity: 0;
       transform: translateY(10px);
     }
   }
 }
 
-.briefing-header {
+.pause-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 18px 22px 12px;
+  gap: 12px;
+  padding: 16px 20px;
   border-bottom: 1px solid rgba(120, 180, 195, 0.22);
 }
 
-.briefing-header h1 {
+.pause-header h1 {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   letter-spacing: 0.06em;
   color: var(--accent-amber);
 }
 
-.briefing-sub {
-  margin: 4px 0 0;
-  font-size: 12px;
-  color: var(--text-dim);
+.pause-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pause-actions button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(110, 190, 200, 0.35);
+  background: rgba(20, 34, 46, 0.92);
+  color: var(--text-main);
+  font: 700 11px/1 inherit;
+  cursor: pointer;
+}
+
+.pause-actions button:hover,
+.pause-actions button:focus-visible {
+  border-color: var(--accent-cyan);
+  background: rgba(56, 242, 212, 0.18);
+  outline: none;
+}
+
+#resume-btn {
+  border-color: var(--accent-cyan);
+  background: rgba(56, 242, 212, 0.16);
 }
 
 .mission-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  padding: 16px 22px;
+  gap: 10px;
+  padding: 16px 20px;
 }
 
 .mission-card {
@@ -135,17 +243,21 @@ dialog#briefing-dialog::backdrop {
   text-align: left;
   padding: 12px 14px;
   border-radius: 9px;
-  border: 1px solid rgba(110, 190, 200, 0.3);
+  border: 1px solid rgba(110, 190, 200, 0.28);
   background: rgba(18, 29, 40, 0.9);
   color: var(--text-main);
   font-family: inherit;
   cursor: pointer;
 }
 
+.mission-card.active {
+  border-color: var(--accent-amber);
+  background: rgba(34, 48, 60, 0.96);
+}
+
 .mission-card:hover,
 .mission-card:focus-visible {
-  border-color: var(--accent-amber);
-  background: rgba(26, 42, 56, 0.96);
+  border-color: var(--accent-cyan);
   outline: 2px solid var(--accent-cyan);
   outline-offset: 2px;
 }
@@ -156,11 +268,6 @@ dialog#briefing-dialog::backdrop {
   font-weight: 700;
 }
 
-.mission-meta {
-  color: var(--accent-amber);
-  font-size: 10.5px;
-}
-
 .mission-desc {
   color: var(--text-dim);
   font-size: 11px;
@@ -168,30 +275,10 @@ dialog#briefing-dialog::backdrop {
 }
 
 .controls-bar {
-  padding: 10px 22px;
-  background: rgba(8, 14, 20, 0.72);
+  padding: 11px 20px;
+  background: rgba(8, 14, 20, 0.78);
   border-top: 1px solid rgba(120, 180, 195, 0.18);
   font-size: 11px;
   color: var(--text-dim);
-  line-height: 1.5;
-}
-
-.briefing-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding: 12px 22px 16px;
-}
-
-#resume-flight-btn {
-  padding: 9px 18px;
-  border-radius: 7px;
-  border: 1px solid var(--accent-cyan);
-  background: rgba(56, 242, 212, 0.16);
-  color: var(--text-main);
-  font: 700 12px/1 inherit;
-  cursor: pointer;
-}
-
-#resume-flight-btn:hover {
-  background: rgba(56, 242, 212, 0.3);
+  line-height: 1.45;
 }

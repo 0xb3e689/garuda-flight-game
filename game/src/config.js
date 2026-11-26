@@ -1,7 +1,7 @@
 // Core simulation constants, aerodynamic envelopes, and world landmarks for Garuda.
 
-export const WORLD_SIZE = 4800;
-export const OCEAN_RADIUS = 11000;
+export const WORLD_SIZE = 9200;
+export const OCEAN_RADIUS = 19000;
 export const GRAVITY = 9.81;
 export const MPS_TO_KTS = 1.943844;
 export const M_TO_FT = 3.28084;
