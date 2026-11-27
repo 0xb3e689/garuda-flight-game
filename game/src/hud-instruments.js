@@ -5,7 +5,7 @@ import { createTopographicRadar } from './hud-radar.js';
 const {round:R,min:MN,max:MX,abs:A,floor:FL,atan2:AT,hypot:HY,PI}=Math;
 const angD=(a,b)=>{const d=((a-b+540)%360)-180;return d<-180?d+360:d;};
 const BG='rgba(10,17,24,.85)',CY='#38f2d4',AM='#ffbe4f',RD='#ff4d4f',GN='#4ade80',BD='rgba(102,224,210,.46)';
-const FAULTS=[['leftEngineOut','PORT ENG OUT'],['fuelLeak','FUEL LEAK'],['flapJammed','FLAPS JAMMED'],['controlDamage','CTRL DAMAGE'],['gearDamaged','GEAR DAMAGE']];
+const FAULTS=[['leftEngineOut','PORT ENG OUT'],['rightEngineOut','STBD ENG OUT'],['fuelLeak','FUEL LEAK'],['flapJammed','FLAPS JAMMED'],['controlDamage','CTRL DAMAGE'],['gearDamaged','GEAR DAMAGE']];
 const CARDS={0:'N',45:'NE',90:'E',135:'SE',180:'S',225:'SW',270:'W',315:'NW'};
 const TONES={danger:'rgba(185,28,28,.92)',warn:'rgba(180,83,9,.92)',good:'rgba(15,118,110,.92)',info:BG};
 

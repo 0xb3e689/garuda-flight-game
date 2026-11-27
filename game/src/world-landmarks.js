@@ -87,8 +87,8 @@ export function buildArchipelagoLandmarks(scene, smT, glT, col) {
 }
 
 export function checkObstacleCollision(col, p, r = 1.6) {
-  for(const b of col.boxes)if(p.x>=b.minX-r&&p.x<=b.maxX+r&&p.y>=b.minY-r&&p.y<=b.maxY+r&&p.z>=b.minZ-r&&p.z<=b.maxZ+r)return {kind:'structure',label:b.label};
-  for(const c of col.cylinders)if(p.y>=c.minY-r&&p.y<=c.maxY+r&&Math.hypot(p.x-c.x,p.z-c.z)<=c.radius+r)return {kind:'structure',label:c.label};
-  for(const t of col.trees)if(p.y>=t.minY&&p.y<=t.maxY+r&&(p.x-t.x)**2+(p.z-t.z)**2<=(t.radius+r)**2)return {kind:'tree',label:'TREE COLLISION'};
+  for(const b of col.boxes)if(p.x>=b.minX-r&&p.x<=b.maxX+r&&p.y>=b.minY-r&&p.y<=b.maxY+r&&p.z>=b.minZ-r&&p.z<=b.maxZ+r)return {kind:'structure',label:b.label,cx:(b.minX+b.maxX)*.5,cz:(b.minZ+b.maxZ)*.5};
+  for(const c of col.cylinders)if(p.y>=c.minY-r&&p.y<=c.maxY+r&&Math.hypot(p.x-c.x,p.z-c.z)<=c.radius+r)return {kind:'structure',label:c.label,cx:c.x,cz:c.z};
+  for(const t of col.trees)if(p.y>=t.minY&&p.y<=t.maxY+r&&(p.x-t.x)**2+(p.z-t.z)**2<=(t.radius+r)**2)return {kind:'tree',label:'TREE COLLISION',cx:t.x,cz:t.z};
   return null;
 }

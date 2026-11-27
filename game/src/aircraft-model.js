@@ -1,4 +1,4 @@
-// Sculpted 3D Garuda G-4 twin-turboprop aircraft builder with NACA wings, riveted livery, nav lights, and physical breakup.
+// Sculpted 3D Garuda G-4 twin-turboprop with symmetric detachable left/right wings & props, tailboom, and nose crush.
 import * as T from 'three';
 import { createBreakupController } from './aircraft-breakup.js';
 import { createAircraftSkinTexture, createSoftParticleTexture, createWingTexture } from './procedural-textures.js';
@@ -19,7 +19,7 @@ function createSweptFinGeometry() {
 }
 
 export function createAircraftModel(scene) {
-  const root=G(),body=G();root.add(body);
+  const root=G(),body=G(),noseG=G();root.add(body);body.add(noseG);
   const glT=createSoftParticleTexture('glow'),prT=createSoftParticleTexture('prop');
   const sm=(c,r=.42,m=.22,o={})=>new T.MeshStandardMaterial({color:c,roughness:r,metalness:m,...o});
   const fM=new T.MeshStandardMaterial({map:createAircraftSkinTexture(),roughness:.4,metalness:.22}),wM=new T.MeshStandardMaterial({map:createWingTexture(),roughness:.42,metalness:.18});
@@ -30,10 +30,11 @@ export function createAircraftModel(scene) {
 
   addL(body,[
     [cy(1.24,1.24,5.7,18),fM,[0,.12,-.1],[P,P,0],[1,.96,1.06]],[new T.PlaneGeometry(5.6,1.9),fM,[-1.22,.12,-.1],[0,-P,0]],[new T.PlaneGeometry(5.6,1.9),fM,[1.22,.12,-.1],[0,P,0]],
-    [cy(.95,.75,6.2),tl,[0,-.95,-.35],[P,0,0],[1.08,1,.44]],[cy(.92,1.15,3.6,14),iv,[0,1.26,-.45],[P,0,0],[1.15,1,.45]],[cy(.76,1.16,2.3,16),iv,[0,-.18,-4],[P,0,0],[1.02,1,.72]],
-    [sp(.8,16,12),dm,[0,-.24,-5.25],[0,0,0],[.96,.74,1.48]],[cy(.98,1.18,2.05,14,1,false,-Math.PI*.55,Math.PI*1.1),gl,[0,.76,-3.28],[P+.28,0,Math.PI]],
+    [cy(.95,.75,6.2),tl,[0,-.95,-.35],[P,0,0],[1.08,1,.44]],[cy(.92,1.15,3.6,14),iv,[0,1.26,-.45],[P,0,0],[1.15,1,.45]],
+    [cy(.98,1.18,2.05,14,1,false,-Math.PI*.55,Math.PI*1.1),gl,[0,.76,-3.28],[P+.28,0,Math.PI]],
     [bx(1.58,.36,.48),bm('#45f5d2'),[0,.58,-3.42]],[bx(1.36,.14,.24),bm('#ffbd3d'),[0,.8,-3.32]],[bx(.06,.72,.42),dm,[0,1.88,1.35],[-.36,0,0]],
   ]);
+  noseG.position.set(0,-.18,-4);addL(noseG,[[cy(.76,1.16,2.3,16),iv,[0,0,0],[P,0,0],[1.02,1,.72]],[sp(.8,16,12),dm,[0,-.06,-1.25],[0,0,0],[.96,.74,1.48]]]);
   [-.72,0,.72].forEach((x)=>add(body,bx(.06,1.18,.08),dm,[x,.88,-3.72],[.46,0,0]));
   [-.42,.42].forEach((x)=>add(body,sp(.22,10,10),dm,[x,.94,-2.55]));
   for(let i=0;i<4;i++)for(const s of [-1,1])addL(body,[[bx(.1,.52,.72),dm,[s*1.21,.44,-1.55+i*1.14]],[bx(.12,.4,.58),wg,[s*1.22,.44,-1.55+i*1.14]]]);
@@ -42,16 +43,18 @@ export function createAircraftModel(scene) {
   for(let s=0;s<6;s++){const a=(s/6)*Math.PI*2+.3;add(fBk,bx(.12,.14,.65+(s%2)*.3),dm,[Math.cos(a)*.85,Math.sin(a)*.72,.34],[(s%3-1)*.25,(s%2?1:-1)*.3,a]);}
   body.add(fBk);
 
-  const wA=G(),LW=v3(-4.2,1.48,-.55),wSt=G(),lW=G();
-  addL(wA,[[createAirfoilGeometry(2.45,.34,12.6),wM,[2.1,1.48,-.55]],[bx(.18,1.25,1.48),gd,[8.55,2.02,-.2],[0,.08,-.24]]]);
-  wSt.position.copy(LW);wSt.visible=false;[-.45,.35].forEach((z)=>add(wSt,bx(.65,.16,.14),dc,[-.24,0,z],[0,0,.12]));
-  lW.position.copy(LW);addL(lW,[[createAirfoilGeometry(2.45,.34,4.2),wM,[-2.1,0,0]],[bx(.18,1.25,1.48),gd,[-4.35,.54,.35],[0,-.08,.24]]]);
-  wA.add(wSt,lW);
+  const wA=G(),LW=v3(-4.2,1.48,-.55),RW=v3(4.2,1.48,-.55),lWSt=G(),rWSt=G(),lW=G(),rW=G(),outG=createAirfoilGeometry(2.45,.34,4.2);
+  add(wA,createAirfoilGeometry(2.45,.34,8.4),wM,[0,1.48,-.55]);
+  [[lWSt,lW,LW,-1],[rWSt,rW,RW,1]].forEach(([st,wg2,pos,s])=>{
+    st.position.copy(pos);st.visible=false;[-.45,.35].forEach((z)=>add(st,bx(.65,.16,.14),dc,[s*.24,0,z],[0,0,-s*.12]));
+    wg2.position.copy(pos);addL(wg2,[[outG,wM,[s*2.1,0,0]],[bx(.18,1.25,1.48),gd,[s*4.35,.54,.35],[0,s*.08,-s*.24]]]);
+    wA.add(st,wg2);
+  });
   [-1,1].forEach((s)=>{const a=v3(s*1.08,-.58,-.55),b=v3(s*3.85,1.44,-.55),d=b.clone().sub(a),m=new T.Mesh(cy(.065,.08,d.length(),10),tl);m.scale.set(1,1,1.9);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(v3(0,1,0),d.normalize());wA.add(m);});
   body.add(wA);
 
   const mkC=(p,pos,sz,m)=>{const g=G();g.position.set(...pos);add(g,bx(...sz),m,[0,0,sz[2]*.5]);p.add(g);return g;};
-  const lAl=mkC(lW,[-1.9,.06,1.23],[3.2,.13,.56],vm),rAl=mkC(body,[6.1,1.54,.68],[3.2,.13,.56],vm),lFl=mkC(body,[-2.75,1.42,.66],[2.65,.14,.68],gd),rFl=mkC(body,[2.75,1.42,.66],[2.65,.14,.68],gd);
+  const lAl=mkC(lW,[-1.9,.06,1.23],[3.2,.13,.56],vm),rAl=mkC(rW,[1.9,.06,1.23],[3.2,.13,.56],vm),lFl=mkC(body,[-2.75,1.42,.66],[2.65,.14,.68],gd),rFl=mkC(body,[2.75,1.42,.66],[2.65,.14,.68],gd);
 
   const bG=bx(.17,2.38,.045),tG=bx(.18,.26,.055);
   const prp=[-1,1].map((s)=>{
@@ -69,28 +72,41 @@ export function createAircraftModel(scene) {
 
   const spr=(c,pos,sc,op,p)=>{const h=new T.Sprite(new T.SpriteMaterial({map:glT,color:c,transparent:true,opacity:op,blending:T.AdditiveBlending,depthWrite:false}));h.position.set(...pos);h.scale.setScalar(sc);p.add(h);return h;};
   const mkH=(c,pos,sc,p=body)=>{add(p,sp(.18,8,8),bm(c),pos);return spr(c,pos,sc,.85,p);};
-  mkH('#ff3b30',[-4.42,.17,-.4],1.35,lW);mkH('#34d399',[8.62,1.65,-.95],1.35);
+  mkH('#ff3b30',[-4.42,.17,-.4],1.35,lW);mkH('#34d399',[4.42,.17,-.4],1.35,rW);
   const str=mkH('#fff7d6',[0,3.83,4.87],1.7,tA),lL=G(),gr=G();
   [-1.55,1.55].forEach((x)=>spr('#fff4c8',[x,1.38,-1.78],1.8,.9,lL));
   [[0,-3.75,.36],[-1.7,.45,.48],[1.7,.45,.48]].forEach(([gx,gz,wr])=>{const g=G();g.position.set(gx,-.98,gz);addL(g,[[cy(.11,.1,.72,10),dm,[0,-.36,0]],[cy(.065,.065,.56,10),ch,[0,-.92,0]],[cy(wr,wr,.36,16),tr,[0,-1.24,0],[0,0,P]],[cy(wr*.46,wr*.46,.39),ch,[0,-1.24,0],[0,0,P]]]);gr.add(g);});
   body.add(lL,gr);body.traverse((o)=>{if(o.isMesh)o.castShadow=o.receiveShadow=true;});scene.add(root);
 
-  const brk=createBreakupController(scene,root,{tail:{mesh:tA,parent:body,restPos:TP,fractureStub:fBk,floorOffset:1.05},leftWing:{mesh:lW,parent:wA,restPos:LW,fractureStub:wSt,floorOffset:.45},leftProp:{mesh:prp[0].det,parent:prp[0].nac,restPos:v3(0,0,-1.64),floorOffset:.55}});
+  const brk=createBreakupController(scene,root,{
+    tail:{mesh:tA,parent:body,restPos:TP,fractureStub:fBk,floorOffset:1.05},
+    leftWing:{mesh:lW,parent:wA,restPos:LW,fractureStub:lWSt,floorOffset:.45},
+    rightWing:{mesh:rW,parent:wA,restPos:RW,fractureStub:rWSt,floorOffset:.45},
+    leftProp:{mesh:prp[0].det,parent:prp[0].nac,restPos:v3(0,0,-1.64),floorOffset:.55},
+    rightProp:{mesh:prp[1].det,parent:prp[1].nac,restPos:v3(0,0,-1.64),floorOffset:.55},
+  });
 
   function updateAircraftModel(s, dt, tS, vis) {
     root.position.copy(s.position);root.quaternion.copy(s.quaternion);body.visible=vis;
-    const rR=s.propRpm??0,rL=s.propRpmLeft??0,oL=rL>.24?Math.min(.84,(rL-.24)*1.15):0,oR=rR>.24?Math.min(.84,(rR-.24)*1.15):0;
+    const bp=s.brokenParts||{},rR=s.propRpm??0,rL=s.propRpmLeft??0,oL=rL>.24?Math.min(.84,(rL-.24)*1.15):0,oR=rR>.24?Math.min(.84,(rR-.24)*1.15):0;
     prp[0].hub.rotation.z=s.propAngleLeft??s.propAngle;prp[1].hub.rotation.z=-s.propAngle;
-    prp[0].disc.visible=oL>.02&&!brk.parts.leftProp.detached;prp[0].disc.material.opacity=oL;prp[1].disc.visible=oR>.02;prp[1].disc.material.opacity=oR;
+    prp[0].disc.visible=oL>.02&&!brk.parts.leftProp.detached;prp[0].disc.material.opacity=oL;
+    prp[1].disc.visible=oR>.02&&!brk.parts.rightProp.detached;prp[1].disc.material.opacity=oR;
     lAl.rotation.x=s.controlSurface.aileron*.45;rAl.rotation.x=-s.controlSurface.aileron*.45;lFl.rotation.x=rFl.rotation.x=-(s.controlSurface.flaps*Math.PI)/180;
     elv.rotation.x=-s.controlSurface.elevator*.42;rud.rotation.y=s.controlSurface.rudder*.45;
-    if(s.status==='crashed'){
-      const cat=s.crashSeverity!=='hard';wA.rotation.set(cat?.05:.02,cat?.08:.03,cat?-.14:-.06);wA.position.set(cat?.28:.08,cat?-.08:-.04,cat?.18:.06);
-      if(s.crashMode!=='water')brk.detachPart('leftProp',s,v3(-4.2,5.2,-7.8),v3(6.5,4.2,9.5));
-      if(cat){brk.detachPart('tail',s,v3(-4.8,6.4,8.2),v3(-1.35,-1.9,2.4));brk.detachPart('leftWing',s,v3(-8.4,5.6,1.5),v3(1.4,-2.2,3.1));}
-      brk.stepDetachedParts(dt,s.crashMode,vis);
+
+    const anyBrk=bp.tail||bp.leftWing||bp.rightWing||bp.leftProp||bp.rightProp;
+    if(anyBrk||s.status==='crashed'){
+      if(bp.leftProp)brk.detachPart('leftProp',s,v3(-4,4.8,-7.2),v3(6.5,4.2,9.5));
+      if(bp.rightProp)brk.detachPart('rightProp',s,v3(4,4.8,-7.2),v3(6.5,-4.2,-9.5));
+      if(bp.leftWing)brk.detachPart('leftWing',s,v3(-7.8,5.2,1.8),v3(1.4,-2.2,3.1));
+      if(bp.rightWing)brk.detachPart('rightWing',s,v3(7.8,5.2,1.8),v3(1.4,2.2,-3.1));
+      if(bp.tail)brk.detachPart('tail',s,v3(s.impactZone==='rightWing'?4.2:-4.8,6.2,8.2),v3(-1.35,-1.9,2.4));
+      brk.stepDetachedParts(dt,s.crashMode||'ground',vis);
+      if(s.status==='crashed'){const sg=s.impactZone==='rightWing'?1:-1,cat=s.crashSeverity!=='hard';wA.rotation.set(cat?.04:.02,sg*(cat?.07:.03),sg*(cat?.12:.05));}
     }else{brk.reattachAllParts();tA.rotation.set(0,0,0);wA.rotation.set(0,0,0);wA.position.set(0,0,0);}
+    if(bp.noseCrushed){noseG.scale.set(1.12,.84,.62);noseG.position.set(0,-.26,-3.62);}else{noseG.scale.set(1,1,1);noseG.position.set(0,-.18,-4);}
     gr.visible=s.gearDown&&s.gearIntact;lL.visible=s.gearDown&&s.status!=='crashed';str.scale.setScalar(Math.sin(tS*10)>.65?2.2:.9);
   }
-  return {root,updateAircraftModel,getDetachedTailWorldPos:()=>(brk.parts.tail.detached?tA.position.clone():null),getDetachedPartsSummary:()=>({tail:brk.parts.tail.detached,leftWing:brk.parts.leftWing.detached,leftProp:brk.parts.leftProp.detached})};
+  return {root,updateAircraftModel,getDetachedTailWorldPos:()=>(brk.parts.tail.detached?tA.position.clone():null),getDetachedPartsSummary:()=>({tail:brk.parts.tail.detached,leftWing:brk.parts.leftWing.detached,rightWing:brk.parts.rightWing.detached,leftProp:brk.parts.leftProp.detached,rightProp:brk.parts.rightProp.detached,noseCrushed:Boolean(noseG.scale.z<.9)})};
 }

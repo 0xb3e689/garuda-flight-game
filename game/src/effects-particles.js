@@ -102,13 +102,20 @@ export function createEffectsSystem(scene) {
   const rG=new T.BufferGeometry().setAttribute('position',new T.BufferAttribute(rP,3)),rL=new T.LineSegments(rG,new T.LineBasicMaterial({color:'#c4dce8',transparent:true,opacity:.42}));
   rL.visible=rL.frustumCulled=false;scene.add(rL);
 
+  function emitWingClipSparks(wp, vel, severe = false) {
+    shed(wp,vel,MX(0,sH(wp.x,wp.z)),severe?5:2);
+    for(let i=0;i<(severe?12:7);i++)emit(jit(wp,1.6,.4,1.6),v3(vel.x*.35+rn(8),2+R()*4.5,vel.z*.35+rn(8)),i%3?'#ffe066':'#cbd5e1',i%3?.38:.9,i%3?1:2,i%3?2.1:6,.92,i%3?-13:-4,i%3!==0);
+  }
+
   function updateEffects(dt, tS, s, cP, rain, isC) {
-    const inW=s.crashMode==='water',fi=s.fuelFireIntensity??0;
+    const inW=s.crashMode==='water',fi=s.fuelFireIntensity??0,bp=s.brokenParts||{},mf=s.malfunctions||{};
     if(inW){if((fC+=dt)>=.065){fC=0;emit(v3(s.position.x+rn(7),.35,s.position.z+rn(7)),v3(rn(2),1.6+R()*1.8,rn(2)),++bI%2?'#c2dce6':'#eef9ff',1.6,2.6,9.2,.52);}}
-    else if(s.status==='crashed'||s.hullPct<68||s.engineHealth<68||s.malfunctions?.leftEngineOut){
+    else if(s.status==='crashed'||s.hullPct<68||s.engineHealth<68||mf.leftEngineOut||mf.rightEngineOut||bp.leftWing||bp.rightWing){
       if((fC+=dt)>=(fi>.1?.036:.06)){
-        fC=0;const wp=(s.status==='crashed'&&R()<.45?v3(-2.4+R()*5.2,.8,-1.2+R()*2):v3(3.15,.9,-.35)).applyQuaternion(s.quaternion).add(s.position);
-        if(fi>.05||(s.status!=='crashed'&&s.hullPct<40))emit(jit(wp,1.2,.2,1.2),v3(rn(2.4),(2.6+fi*2.4)+R()*2.6,rn(2.4)),R()<.35?'#fff0a6':R()<.7?'#ff6a00':'#d9260a',.45+R()*.3,(1.6+fi*1.8)+R()*1.2,3.5+fi*3.2,.55+fi*.4,0,true);
+        fC=0;const side=bp.rightWing||mf.rightEngineOut||s.impactZone==='rightWing'?1:bp.leftWing||mf.leftEngineOut||s.impactZone==='leftWing'?-1:0;
+        const anc=s.impactZone==='nose'&&!bp.leftWing&&!bp.rightWing?v3(rn(1.2),.2,-3.2):v3(side?side*3.15:3.15,.9,-.35);
+        const wp=(s.status==='crashed'&&R()<.35&&!side?v3(-2.4+R()*5.2,.8,-1.2+R()*2):anc).applyQuaternion(s.quaternion).add(s.position);
+        if(fi>.05||(s.status!=='crashed'&&s.hullPct<35))emit(jit(wp,1.2,.2,1.2),v3(rn(2.4),(2.6+fi*2.4)+R()*2.6,rn(2.4)),R()<.35?'#fff0a6':R()<.7?'#ff6a00':'#d9260a',.45+R()*.3,(1.6+fi*1.8)+R()*1.2,3.5+fi*3.2,.55+fi*.4,0,true);
         emit(jit(wp,1.4,1.1,1.4),v3(rn(2.4),3.6+R()*2.2,rn(2.4)),'#22282e',2,2.6,11.5,.62);
       }
     }
@@ -142,5 +149,5 @@ export function createEffectsSystem(scene) {
       rG.attributes.position.needsUpdate=true;
     }
   }
-  return {clearDebris,emitTouchdownSmoke,emitWaterSplash,emitRoaringFireBurst,stampCrashGougeTrail,seedWingtipTrails,updateEffects};
+  return {clearDebris,emitTouchdownSmoke,emitWaterSplash,emitRoaringFireBurst,emitWingClipSparks,stampCrashGougeTrail,seedWingtipTrails,updateEffects};
 }

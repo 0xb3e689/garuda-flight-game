@@ -31,7 +31,7 @@ export function applyShotPreset(name, { flightState: s, missionManager: mm, worl
   if (name === 'debrief') {
     const m = mm.loadMission(3); mm.setShowcaseProgress(2, 400); world.setAtmospherePreset(m.atmosphere);
     rst(-760, 10.35, 860, 48, 0, 11, 0, 0, 2, true, 19, 12, 8, true);
-    Object.assign(s, { status: 'crashed', crashMode: 'ground', crashCause: 'runway', crashSeverity: 'catastrophic', hasFuelFire: true, crashTime: 2.6, fuelFireDelay: 0.9, fuelFireIntensity: 1, propRpm: 0, propRpmLeft: 0, gearIntact: false, incidentReport: { outcome: 'CRASHED', title: 'HARD LANDING — GEAR COLLAPSE', detail: 'Sink -9.8 m/s (max 4.6) at 79 kt, bank 19°.', sinkMps: 9.8, speedKts: 79, bankDeg: 19, onRunway: true, fuelPct: 19, hullPct: 12 } });
+    Object.assign(s, { status: 'crashed', crashMode: 'ground', crashCause: 'runway', impactZone: 'leftWing', crashSeverity: 'catastrophic', hasFuelFire: true, crashTime: 2.6, fuelFireDelay: 0.9, fuelFireIntensity: 1, propRpm: 0, propRpmLeft: 0, gearIntact: false, brokenParts: { leftWing: true, rightWing: false, leftProp: true, rightProp: false, tail: true, noseCrushed: false }, incidentReport: { outcome: 'CRASHED', title: 'HARD LANDING — GEAR COLLAPSE', detail: 'Sink -9.8 m/s (max 4.6) at 79 kt, bank 19°.', sinkMps: 9.8, speedKts: 79, bankDeg: 19, onRunway: true, fuelPct: 19, hullPct: 12 } });
     rig.setMode('orbit'); rig.setCustomOrbitAngle(1.42);
     for (let k = 0; k < 28; k++) ac.updateAircraftModel(s, 0.04, 10.3 + k * 0.04, true);
     world.updateWorld(0.05, 11.4, s.position, m.wind, s.quaternion); rig.updateCamera(s, 0.05, true);

@@ -95,6 +95,7 @@ function bootGaruda() {
 
   const ev={
     onTouchdown:(i)=>{fx.emitTouchdownSmoke(st.position,st.quaternion,i.hard);aud.playTouchdown(i.hard);hud.showBanner(i.gearUp?'GEAR-UP SCRAPE — HULL DAMAGED':i.hard?`HARD TOUCHDOWN (-${i.sinkMps.toFixed(1)} m/s) · HOLD [B]`:`TOUCHDOWN (-${i.sinkMps.toFixed(1)} m/s) · HOLD [B] TO STOP`,i.gearUp?'danger':i.hard?'warn':'good',2.8);},
+    onWingClip:(wp,vel,sev)=>{fx.emitWingClipSparks(wp,vel,sev);aud.playTouchdown(true);},
     onMalfunction:(f)=>{aud.playTouchdown(true);hud.showBanner(`MALFUNCTION: ${f.code}`,'danger',3.4);rad(`Caution Garuda 4! ${f.code}. ${f.detail}`,true);},
     onFullStop:(r)=>{aud.playRingChime();hud.showBanner(r.title,'good',4);rad(r.missionComplete?'Merpati Tower: Full stop confirmed. Mission complete!':'Merpati Tower: Full stop confirmed. Mission gates remain open.');},
     onCrash:(r)=>{
