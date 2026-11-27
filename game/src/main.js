@@ -98,10 +98,10 @@ function bootGaruda() {
     onMalfunction:(f)=>{aud.playTouchdown(true);hud.showBanner(`MALFUNCTION: ${f.code}`,'danger',3.4);rad(`Caution Garuda 4! ${f.code}. ${f.detail}`,true);},
     onFullStop:(r)=>{aud.playRingChime();hud.showBanner(r.title,'good',4);rad(r.missionComplete?'Merpati Tower: Full stop confirmed. Mission complete!':'Merpati Tower: Full stop confirmed. Mission gates remain open.');},
     onCrash:(r)=>{
-      const fy=Math.max(0,sampleTerrainHeight(st.position.x,st.position.z));fx.emitRoaringFireBurst(st.position,st.quaternion,fy,r.crashMode==='water',r.severity||'catastrophic');
+      const fy=Math.max(0,sampleTerrainHeight(st.position.x,st.position.z));fx.emitRoaringFireBurst(st.position,st.quaternion,fy,r.crashMode==='water',r.severity||'catastrophic',r.crashCause||'terrain',false);
       if(r.crashMode!=='water')fx.emitTouchdownSmoke(st.position,st.quaternion,true);
       aud.playCrash();hud.showBanner(r.title,'danger',4.5);
-      rad(r.crashMode==='water'?'SAR Dispatch: Garuda 4 in the water! Coast Guard deploying.':r.severity==='hard'?'Tower: Hard impact on deck — crash trucks rolling!':'Mayday! Catastrophic impact — rescue dispatched!',true);
+      rad(r.crashMode==='water'?'SAR Dispatch: Garuda 4 in the water! Coast Guard deploying.':r.hasFuelFire?'Mayday! Severe impact — fire trucks rolling!':'Tower: Hard impact on deck — crash crew rolling!',true);
     },
   };
 

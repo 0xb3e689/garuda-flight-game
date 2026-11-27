@@ -13,7 +13,7 @@ export function createFlightState() {
     throttle:.72,flapStage:0,gearDown:true,brakes:false,fuelKg:SP.fuelCapacityKg,fuelPct:100,fuelRangeKm:42,inThermal:false,
     hullPct:100,engineHealth:100,gearIntact:true,engineTempC:540,propAngle:0,propAngleLeft:0,propRpm:.72,propRpmLeft:.72,
     airspeedMps:62,airspeedKts:120,altitudeM:165,altitudeFt:541,aglM:150,headingDeg:0,pitchDeg:0,rollDeg:0,vsiMps:0,aoaDeg:3,gLoad:1,
-    stalling:false,overspeed:false,lowFuel:false,onGround:false,status:'flying',crashMode:null,crashSeverity:null,crashImpactKts:0,crashTime:0,cameraShake:0,touchdownTimer:0,
+    stalling:false,overspeed:false,lowFuel:false,onGround:false,status:'flying',crashMode:null,crashSeverity:null,crashCause:null,hasFuelFire:false,fuelFireDelay:1,fuelFireIntensity:0,crashImpactKts:0,crashTime:0,cameraShake:0,touchdownTimer:0,
     malfunctions:{leftEngineOut:false,fuelLeak:false,flapJammed:false,controlDamage:false,gearDamaged:false},
     controlSurface:{aileron:0,elevator:0,rudder:0,flaps:0},activeRunwayId:'RWY36',papiGlideDeg:4.5,papiWhiteCount:2,incidentReport:null,
   };
@@ -41,7 +41,7 @@ export function resetFlightState(s, p) {
   s.position.set(p.x,p.y,p.z);s.quaternion.setFromEuler(new T.Euler(((p.pitchDeg??0)*PI)/180,(-p.headingDeg*PI)/180,((p.rollDeg??0)*PI)/180,'YXZ'));
   s.velocity.copy(qD(FWD,s.quaternion)).multiplyScalar((p.speedKts??115)/MPS_TO_KTS);s.angularVel.set(0,0,0);
   const thr=p.throttle??.68,fp=p.fuelPct??100;
-  Object.assign(s,{throttle:thr,flapStage:p.flapStage??0,gearDown:p.gearDown??false,brakes:false,fuelPct:fp,fuelKg:(fp/100)*SP.fuelCapacityKg,hullPct:p.hullPct??100,engineHealth:p.engineHealth??100,gearIntact:true,engineTempC:540,propRpm:MX(.25,thr),propRpmLeft:MX(.25,thr),onGround:Boolean(p.onGround),status:'flying',crashMode:null,crashSeverity:null,incidentReport:null,crashImpactKts:0,crashTime:0,cameraShake:0,touchdownTimer:0,malfunctions:{leftEngineOut:false,fuelLeak:false,flapJammed:false,controlDamage:false,gearDamaged:false}});
+  Object.assign(s,{throttle:thr,flapStage:p.flapStage??0,gearDown:p.gearDown??false,brakes:false,fuelPct:fp,fuelKg:(fp/100)*SP.fuelCapacityKg,hullPct:p.hullPct??100,engineHealth:p.engineHealth??100,gearIntact:true,engineTempC:540,propRpm:MX(.25,thr),propRpmLeft:MX(.25,thr),onGround:Boolean(p.onGround),status:'flying',crashMode:null,crashSeverity:null,crashCause:null,hasFuelFire:false,fuelFireDelay:1,fuelFireIntensity:0,incidentReport:null,crashImpactKts:0,crashTime:0,cameraShake:0,touchdownTimer:0,malfunctions:{leftEngineOut:false,fuelLeak:false,flapJammed:false,controlDamage:false,gearDamaged:false}});
   updateDerivedTelemetry(s,v3());
 }
 

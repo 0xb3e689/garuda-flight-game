@@ -72,10 +72,14 @@ export function createEffectsSystem(scene) {
     }
   };
 
-  function emitRoaringFireBurst(wp, q, fy, isW = false, sev = 'catastrophic') {
+  function emitRoaringFireBurst(wp, q, fy, isW = false, sev = 'catastrophic', cause = 'terrain', postFire = false) {
     if(isW){emitWaterSplash(wp,1.45);for(let i=0;i<14;i++)emit(v3(wp.x+rn(8),1+R()*2.5,wp.z+rn(8)),v3(rn(3.5),2.2+R()*2.6,rn(3.5)),'#e8f5fa',2+R()*.8,4,13,.55);return;}
-    if(sev==='hard'){shed(wp,v3(),fy,5);for(let i=0;i<8;i++)emit(jit(wp,3.2,.8+i*.7,3.2),v3(rn(2),2.5+R()*2.2,rn(2)),i<2?'#ff8c2b':'#2d333a',1.5+R()*.8,2.2,8,i<2?.85:.62,0,i<2);return;}
-    shed(wp,v3(),fy,16,true);
+    const cat=sev==='catastrophic';
+    shed(wp,v3(),fy,cat?14:6,cat);
+    const dustCl=cause==='runway'||cause==='obstacle'?'#8a949e':'#6b5742';
+    for(let i=0;i<(cat?16:10);i++)emit(jit(wp,4.4,.5+R()*1.8,4.4),v3(rn(7.5),2.2+R()*4.2,rn(7.5)),i%3?dustCl:'#2c333a',1.4+R()*.9,2.8,cat?11.5:8.5,.7,-3.5);
+    for(let i=0;i<(cat?12:8);i++)emit(jit(wp,2.8,.4+R()*1.2,2.8),v3(rn(9),3.5+R()*5.5,rn(9)),i%2?'#ffe680':'#ffaa2b',.38+R()*.25,1.1,2.2,.95,-14,true);
+    if(!postFire)return;
     for(const anc of [v3(3.15,1,-.5),v3(1.6,.6,.3),v3(-2.6,1.1,-.8),v3(.4,.9,-1.6)]){
       const o=anc.applyQuaternion(q).add(wp);
       for(let i=0;i<4;i++)emit(jit(o,1.4,i*.65,1.4),v3(rn(1.6),2.8+R()*2,rn(1.6)),i<2?'#fff0a6':'#ff991a',.7+R()*.4,2.8+R()*1.4,5.5,.95,0,true);
@@ -99,22 +103,22 @@ export function createEffectsSystem(scene) {
   rL.visible=rL.frustumCulled=false;scene.add(rL);
 
   function updateEffects(dt, tS, s, cP, rain, isC) {
-    const inW=s.crashMode==='water',cat=s.status==='crashed'&&s.crashSeverity!=='hard';
+    const inW=s.crashMode==='water',fi=s.fuelFireIntensity??0;
     if(inW){if((fC+=dt)>=.065){fC=0;emit(v3(s.position.x+rn(7),.35,s.position.z+rn(7)),v3(rn(2),1.6+R()*1.8,rn(2)),++bI%2?'#c2dce6':'#eef9ff',1.6,2.6,9.2,.52);}}
     else if(s.status==='crashed'||s.hullPct<68||s.engineHealth<68||s.malfunctions?.leftEngineOut){
-      if((fC+=dt)>=(s.status==='crashed'?.032:.055)){
+      if((fC+=dt)>=(fi>.1?.036:.06)){
         fC=0;const wp=(s.status==='crashed'&&R()<.45?v3(-2.4+R()*5.2,.8,-1.2+R()*2):v3(3.15,.9,-.35)).applyQuaternion(s.quaternion).add(s.position);
-        if(cat||(s.status!=='crashed'&&s.hullPct<45))emit(jit(wp,1.2,.2,1.2),v3(rn(2.4),4.4+R()*3,rn(2.4)),R()<.35?'#fff0a6':R()<.7?'#ff6a00':'#d9260a',.48+R()*.3,2.6+R()*1.6,6.4,.94,0,true);
-        emit(jit(wp,1.4,1.2,1.4),v3(rn(2.5),4.2+R()*2.4,rn(2.5)),'#22282e',2.1,3,12.5,.68);
+        if(fi>.05||(s.status!=='crashed'&&s.hullPct<40))emit(jit(wp,1.2,.2,1.2),v3(rn(2.4),(2.6+fi*2.4)+R()*2.6,rn(2.4)),R()<.35?'#fff0a6':R()<.7?'#ff6a00':'#d9260a',.45+R()*.3,(1.6+fi*1.8)+R()*1.2,3.5+fi*3.2,.55+fi*.4,0,true);
+        emit(jit(wp,1.4,1.1,1.4),v3(rn(2.4),3.6+R()*2.2,rn(2.4)),'#22282e',2,2.6,11.5,.62);
       }
     }
     if(s.status==='crashed'&&s.crashMode==='ground'){
       const hs=HY(s.velocity.x,s.velocity.z),gy=sH(s.position.x,s.position.z);
-      if(gy>.25&&s.position.y<=gy+3.2&&hs>1.2&&(!lastG||HY(s.position.x-lastG.x,s.position.z-lastG.z)>=2.1)){
-        const yw=Math.atan2(-s.velocity.x,-s.velocity.z),wg=v3(4.8,0,0).applyQuaternion(s.quaternion).add(s.position);
+      if(gy>.25&&s.position.y<=gy+3.2&&hs>1.4&&(!lastG||HY(s.position.x-lastG.x,s.position.z-lastG.z)>=1.9)){
+        const yw=Math.atan2(-s.velocity.x,-s.velocity.z),wg=v3(4.8,0,0).applyQuaternion(s.quaternion).add(s.position),rw=s.crashCause==='runway';
         stamp(s.position.x,s.position.z,yw,1.05,1.15);stamp(wg.x,wg.z,yw,.55,.9);lastG=s.position.clone();
         if(hs>9.5)shed(s.position,s.velocity,gy,hs>18?3:1);
-        for(let k=0;k<3;k++)emit(v3(s.position.x+rn(4.5),gy+.6,s.position.z+rn(4.5)),v3(-s.velocity.x*.25+rn(5.5),2.5+R()*4.2,-s.velocity.z*.25+rn(5.5)),k?'#524030':'#ffc44d',k?1.35:.38,k?2.8:1.5,k?9.2:2.6,k?.72:.95,-9.5,!k);
+        for(let k=0;k<4;k++){const spk=k<(rw?2:1);emit(v3(s.position.x+rn(4.2),gy+.55,s.position.z+rn(4.2)),v3(-s.velocity.x*.28+rn(6),2.4+R()*4.6,-s.velocity.z*.28+rn(6)),spk?'#ffd666':rw?'#cbd5e1':'#5c4835',spk?.36:1.3,spk?1.2:2.6,spk?2.2:9,spk?.95:.72,spk?-13:-7,spk);}
       }
     }
     for(const p of pool){if(p.l<=0)continue;if((p.l-=dt)<=0){p.sp.visible=false;continue;}const r=1-p.l/p.mx;if(p.g)p.v.y+=p.g*dt;p.sp.position.addScaledVector(p.v,dt);p.sp.scale.setScalar(p.s0+(p.s1-p.s0)*r);p.m.opacity=p.o*(1-r*r);}
