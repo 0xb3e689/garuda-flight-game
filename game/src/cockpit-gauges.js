@@ -1,79 +1,103 @@
-// High-resolution 1280x480 live illuminated cockpit instrument panel renderer (IAS, Gyro, Altimeter, HSI & Annunciators).
-const {cos:C,sin:S,PI,max:MX,min:MN,round:R}=Math,P2=PI*2;
-const cr=(x,a,b,r,f,s=null,l=1.6)=>{x.beginPath();x.arc(a,b,r,0,P2);if(f){x.fillStyle=f;x.fill();}if(s){x.strokeStyle=s;x.lineWidth=l;x.stroke();}};
+// Dual Garmin G1000 1280x480 glass cockpit: PFD Synthetic Vision + ILS + HSI, VHF/AP FCU, MFD EIS + Moving Map + CAS.
+import { FLAP_ANGLES, RUNWAYS } from './config.js';
+const {cos:C,sin:S,PI,max:MX,min:MN,round:R,floor:FL}=Math,P2=PI*2;
 const sg=(x,a,b,c,d,s,l=2)=>{x.strokeStyle=s;x.lineWidth=l;x.beginPath();x.moveTo(a,b);x.lineTo(c,d);x.stroke();};
 const tx=(x,t,a,b,sz,f,al='center')=>{x.font=`bold ${sz}px monospace`;x.fillStyle=f;x.textAlign=al;x.textBaseline='middle';x.fillText(t,a,b);};
-const bx=(x,a,b,w,h,f,s,l=2)=>{x.fillStyle=f;x.fillRect(a,b,w,h);if(s){x.strokeStyle=s;x.lineWidth=l;x.strokeRect(a,b,w,h);}};
+const bx=(x,a,b,w,h,f,s=null,l=2)=>{if(f){x.fillStyle=f;x.fillRect(a,b,w,h);}if(s){x.strokeStyle=s;x.lineWidth=l;x.strokeRect(a,b,w,h);}};
 const lG=(x,a,b,c,d,st)=>{const g=x.createLinearGradient(a,b,c,d);st.forEach(([t,k])=>g.addColorStop(t,k));return g;};
+const CY='#38f2d4',AM='#ffbe4f',MG='#e879f9',GN='#22c55e',RD='#ff4d4f';
+const bezel=(x,a,b,w,h,t)=>{bx(x,a-8,b-8,w+16,h+16,'#182028','#495b6c',2.5);bx(x,a,b,w,h,'#081018','#283846',1.5);bx(x,a,b,w,26,'#0d1822','#243644',1);tx(x,t,a+10,b+13,12,'#8fb7c8','left');};
 
-function drawGlassReflection(x, cx, cy, r) {
-  x.save();x.beginPath();x.arc(cx,cy,r-2,0,P2);x.clip();
-  x.fillStyle=lG(x,cx-r,cy-r,cx+r*.6,cy+r*.4,[[0,'rgba(255,255,255,.16)'],[.38,'rgba(220,242,255,.05)'],[.55,'rgba(255,255,255,0)']]);
-  x.fillRect(cx-r,cy-r,r*2,r*2);x.restore();
+function drawG1000PFD(x,s,wpB){
+  const X=22,Y=26,W=560,H=428,cx=X+W*.5,cy=Y+166;
+  bezel(x,X,Y,W,H,'G1000 PFD · SYNTH VISION');
+  tx(x,s.apEngaged?'AP ON':'FD',X+234,Y+13,12,s.apEngaged?GN:'#64748b');
+  tx(x,`HDG ${String(R(s.apTargetHdg)%360).padStart(3,'0')}°`,X+326,Y+13,12,CY);
+  tx(x,`ALT ${R(s.apTargetAltFt)}FT`,X+434,Y+13,12,AM);
+  tx(x,s.ilsActive?'ILS':'GPS',X+W-14,Y+13,12,s.ilsActive?MG:GN,'right');
+  x.save();x.beginPath();x.rect(X+2,Y+27,W-4,264);x.clip();x.translate(cx,cy);x.rotate((-s.rollDeg*PI)/180);
+  const py=MX(-120,MN(120,s.pitchDeg*4.2));
+  x.fillStyle=lG(x,0,-220,0,py,[[0,'#0e447d'],[.65,'#2574b5'],[1,'#67b3e0']]);x.fillRect(-360,-280+py,720,280);
+  x.fillStyle=lG(x,0,py,0,220,[[0,'#6d4c2c'],[.35,'#4a3a24'],[1,'#1e231c']]);x.fillRect(-360,py,720,280);
+  x.fillStyle='rgba(36,68,54,.65)';x.beginPath();x.moveTo(-360,py);
+  [[-260,-34],[-170,-12],[-95,-44],[-20,-18],[55,-48],[140,-20],[230,-38],[360,0]].forEach(([mx,my])=>x.lineTo(mx,py+my));
+  x.lineTo(360,py);x.closePath();x.fill();
+  for(let i=1;i<=5;i++)sg(x,-360,py+i*i*6.5,360,py+i*i*6.5,'rgba(120,220,180,.24)',1);
+  for(let k=-6;k<=6;k++)sg(x,k*18,py,k*110,py+220,'rgba(120,220,180,.2)',1);
+  sg(x,-360,py,360,py,'#fff',2.2);
+  [-20,-10,10,20].forEach((d)=>{const dy=py-d*4.2,w=Math.abs(d)===10?26:42;sg(x,-w,dy,w,dy,'#fff',1.8);tx(x,String(d),w+14,dy,11,'#fff');tx(x,String(d),-w-14,dy,11,'#fff');});
+  x.restore();
+  x.strokeStyle='#e2f1f8';x.lineWidth=1.8;x.beginPath();x.arc(cx,cy,104,-PI*.82,-PI*.18);x.stroke();
+  x.strokeStyle=AM;x.lineWidth=4;x.beginPath();x.moveTo(cx-44,cy);x.lineTo(cx-12,cy);x.lineTo(cx-12,cy+9);x.moveTo(cx+44,cy);x.lineTo(cx+12,cy);x.lineTo(cx+12,cy+9);x.stroke();
+  x.fillStyle=AM;x.beginPath();x.arc(cx,cy,3.5,0,P2);x.fill();
+  bx(x,X+8,Y+44,74,224,'rgba(6,13,20,.82)','#385366',1.5);tx(x,'IAS',X+45,Y+56,11,'#8eb7c8');
+  for(let v=FL((s.airspeedKts-50)/20)*20;v<=s.airspeedKts+50;v+=20){if(v<0)continue;const ty=cy-(v-s.airspeedKts)*2.2;if(ty>Y+66&&ty<Y+258){sg(x,X+68,ty,X+80,ty,'#cde5ef',1.5);tx(x,String(v),X+60,ty,12,'#cde5ef','right');}}
+  bx(x,X+4,cy-16,80,32,'#060d14',s.stalling?RD:CY,2);tx(x,String(R(s.airspeedKts)),X+44,cy,18,'#fff');
+  bx(x,X+W-92,Y+44,84,224,'rgba(6,13,20,.82)','#385366',1.5);tx(x,'ALT',X+W-50,Y+56,11,'#8eb7c8');
+  for(let v=FL((s.altitudeFt-250)/100)*100;v<=s.altitudeFt+250;v+=100){if(v<0)continue;const ty=cy-(v-s.altitudeFt)*.44;if(ty>Y+66&&ty<Y+258){sg(x,X+W-90,ty,X+W-78,ty,'#cde5ef',1.5);tx(x,String(v),X+W-72,ty,12,'#cde5ef','left');}}
+  bx(x,X+W-96,cy-16,88,32,'#060d14',AM,2);tx(x,String(R(s.altitudeFt)),X+W-52,cy,17,'#fff');
+  tx(x,`VS ${s.vsiMps>=0?'+':''}${s.vsiMps.toFixed(1)}`,X+W-50,Y+256,10.5,CY);
+  if(s.ilsActive){
+    const lx=cx+s.ilsLocDev*64,ly=Y+276,gx=X+W-108,gy=cy+s.ilsGsDev*64;
+    bx(x,cx-74,ly-8,148,16,'rgba(7,15,24,.88)',MG,1.2);bx(x,gx-8,cy-74,16,148,'rgba(7,15,24,.88)',MG,1.2);
+    x.fillStyle=MG;[[lx,ly],[gx,gy]].forEach(([a,b])=>{x.beginPath();x.moveTo(a,b-6);x.lineTo(a+6,b);x.lineTo(a,b+6);x.lineTo(a-6,b);x.fill();});
+  }
+  const hy=Y+360,hr=58;x.fillStyle='#08131d';x.beginPath();x.arc(cx,hy,hr,0,P2);x.fill();x.strokeStyle='#436073';x.lineWidth=1.8;x.stroke();
+  x.save();x.translate(cx,hy);x.rotate((-s.headingDeg*PI)/180);
+  ['N','3','6','E','12','15','S','21','24','W','30','33'].forEach((l,i)=>{const a=-PI/2+(i/12)*P2;tx(x,l,C(a)*(hr-12),S(a)*(hr-12),11,i%3?'#c8dce6':AM);});
+  if(Number.isFinite(wpB)){const wa=((wpB-90)*PI)/180;sg(x,C(wa)*-34,S(wa)*-34,C(wa)*42,S(wa)*42,MG,2.8);}
+  x.restore();bx(x,cx-28,hy-hr-12,56,20,'#060d14',CY,1.5);tx(x,`${String(R(s.headingDeg)%360).padStart(3,'0')}°`,cx,hy-hr-2,13,'#fff');
+  tx(x,`OAT 24°C · ${s.gLoad.toFixed(1)}G`,X+16,Y+408,11,'#90b8c8','left');tx(x,`TRIM ${(s.trimPitch*100).toFixed(0)}%`,X+W-16,Y+408,11,AM,'right');
 }
 
-function drawDialBezel(x, cx, cy, r, lbl) {
-  cr(x,cx+3,cy+4,r+10,'rgba(0,0,0,.55)');
-  cr(x,cx,cy,r+9,lG(x,cx-r,cy-r,cx+r,cy+r,[[0,'#5a6977'],[.42,'#222b33'],[.85,'#11161c'],[1,'#394652']]));
-  cr(x,cx,cy,r+3,null,'#6c7d8d',1.6);
-  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sy])=>{const px=cx+sx*r*.88,py=cy+sy*r*.88;cr(x,px,py,4.2,'#485664');sg(x,px-2.4,py-1.2,px+2.4,py+1.2,'#151c22',1.2);});
-  const fg=x.createRadialGradient(cx,cy,r*.15,cx,cy,r);fg.addColorStop(0,'#101922');fg.addColorStop(.82,'#0c131a');fg.addColorStop(1,'#1b242d');
-  cr(x,cx,cy,r,fg);if(lbl)tx(x,lbl,cx,cy+r*.64,12,'#a3bcc9');
-}
-
-function drawAttitudeIndicator(x, cx, cy, r, pD, rD) {
-  drawDialBezel(x,cx,cy,r,'');x.save();x.beginPath();x.arc(cx,cy,r-2,0,P2);x.clip();x.translate(cx,cy);x.rotate((-rD*PI)/180);
-  const py=MX(-r*.85,MN(r*.85,pD*2.4));
-  x.fillStyle=lG(x,0,-r,0,py,[[0,'#125992'],[1,'#3696cc']]);x.fillRect(-r*1.5,-r*1.6+py,r*3,r*1.6);
-  x.fillStyle=lG(x,0,py,0,r,[[0,'#8c5328'],[1,'#4d2b14']]);x.fillRect(-r*1.5,py,r*3,r*1.6);
-  sg(x,-r,py,r,py,'#fff',2.6);
-  [-20,-10,10,20].forEach((d)=>sg(x,Math.abs(d)===10?-20:-32,py-d*2.4,Math.abs(d)===10?20:32,py-d*2.4,'#fff',1.8));
-  [-60,-45,-30,-20,-10,0,10,20,30,45,60].forEach((ag)=>{const a=((ag-90)*PI)/180,l=ag%30?8:13;sg(x,C(a)*(r-l),S(a)*(r-l),C(a)*(r-2),S(a)*(r-2),'#f8fafc');});
-  x.restore();x.strokeStyle='#ffab24';x.lineWidth=4;x.beginPath();x.moveTo(cx-38,cy);x.lineTo(cx-11,cy);x.lineTo(cx-11,cy+8);x.moveTo(cx+38,cy);x.lineTo(cx+11,cy);x.lineTo(cx+11,cy+8);x.stroke();
-  cr(x,cx,cy,4,'#ffab24');x.fillStyle='#ff6b2b';x.beginPath();x.moveTo(cx,cy-r+14);x.lineTo(cx-6,cy-r+24);x.lineTo(cx+6,cy-r+24);x.fill();
-  drawGlassReflection(x,cx,cy,r);
-}
-
-function drawAirspeedDial(x, cx, cy, r, kts) {
-  drawDialBezel(x,cx,cy,r,'IAS KTS');
-  const toA=(v)=>PI*.75+(MX(0,MN(240,v))/240)*PI*1.5;
-  [[35,95,'#e2e8f0',5],[52,165,'#22c55e',6],[165,215,'#f59e0b',6],[215,240,'#ef4444',7]].forEach(([a,b,c,l])=>{x.strokeStyle=c;x.lineWidth=l;x.beginPath();x.arc(cx,cy,r-10,toA(a),toA(b));x.stroke();});
-  for(let v=0;v<=240;v+=40){const a=toA(v);sg(x,cx+C(a)*(r-18),cy+S(a)*(r-18),cx+C(a)*(r-5),cy+S(a)*(r-5),'#dbe6ef',2.2);tx(x,String(v),cx+C(a)*(r-31),cy+S(a)*(r-31),13,'#edf5fa');}
-  const na=toA(kts);sg(x,cx-C(na)*14,cy-S(na)*14,cx+C(na)*(r-13),cy+S(na)*(r-13),'#fff9e6',3.2);
-  cr(x,cx,cy,8,'#2d3740');tx(x,String(R(kts)).padStart(3,'0'),cx,cy+25,16,'#38f2d4');drawGlassReflection(x,cx,cy,r);
-}
-
-function drawAltimeterDial(x, cx, cy, r, ft) {
-  drawDialBezel(x,cx,cy,r,'ALT FT');
-  for(let i=0;i<10;i++){const a=-PI/2+(i/10)*P2;sg(x,cx+C(a)*(r-16),cy+S(a)*(r-16),cx+C(a)*(r-4),cy+S(a)*(r-4),'#dbe6ef',2.2);tx(x,String(i),cx+C(a)*(r-28),cy+S(a)*(r-28),14,'#edf5fa');}
-  bx(x,cx+22,cy-10,40,18,'#070c10','#475968',1.2);tx(x,'29.92',cx+42,cy-1,10,'#ffcb6b');
-  const a1=-PI/2+((ft%10000)/10000)*P2,a2=-PI/2+((ft%1000)/1000)*P2;
-  sg(x,cx,cy,cx+C(a1)*r*.54,cy+S(a1)*r*.54,'#ffba3b',5);sg(x,cx,cy,cx+C(a2)*(r-13),cy+S(a2)*(r-13),'#fff',3);
-  bx(x,cx-32,cy+16,64,21,'#070b0f','#38f2d4',1.4);tx(x,String(R(ft)),cx,cy+27,15,'#38f2d4');drawGlassReflection(x,cx,cy,r);
-}
-
-function drawCompassHSI(x, cx, cy, r, hdg, wpB) {
-  drawDialBezel(x,cx,cy,r,'');x.save();x.translate(cx,cy);x.rotate((-hdg*PI)/180);
-  ['N','3','6','E','12','15','S','21','24','W','30','33'].forEach((l,i)=>{const a=-PI/2+(i/12)*P2;tx(x,l,C(a)*(r-20),S(a)*(r-20),13,i%3?'#d6e3ec':'#ffbd3d');});
-  if(Number.isFinite(wpB)){const wa=((wpB-90)*PI)/180;sg(x,C(wa)*-(r-26),S(wa)*-(r-26),C(wa)*(r-12),S(wa)*(r-12),'#38f2d4',3.2);}
-  x.restore();x.fillStyle='#ff6b2b';x.beginPath();x.moveTo(cx,cy-r+2);x.lineTo(cx-7,cy-r-9);x.lineTo(cx+7,cy-r-9);x.fill();
-  tx(x,`${String(R(hdg)%360).padStart(3,'0')}°`,cx,cy+4,16,'#fff');drawGlassReflection(x,cx,cy,r);
-}
-
-export function renderCockpitPanelCanvas(x, s, wpB) {
-  x.fillStyle=lG(x,0,0,0,480,[[0,'#222b34'],[.14,'#141c24'],[1,'#0e141a']]);x.fillRect(0,0,1280,480);
-  x.fillStyle=lG(x,0,0,0,75,[[0,'rgba(255,196,104,.22)'],[1,'rgba(255,196,104,0)']]);x.fillRect(0,0,1280,75);
-  x.strokeStyle='#3c4e5e';x.lineWidth=4;x.strokeRect(8,8,1264,464);tx(x,'GARUDA G-4 · PK-GRD',28,30,16,'#e5bc69','left');
-  drawAirspeedDial(x,162,184,106,s.airspeedKts);drawAttitudeIndicator(x,412,184,114,s.pitchDeg,s.rollDeg);drawAltimeterDial(x,662,184,106,s.altitudeFt);drawCompassHSI(x,412,382,76,s.headingDeg,wpB);
-  bx(x,52,322,234,122,'#0b1218','#43586b',2.2);
-  [['VSI (M/S)',`${s.vsiMps>=0?'+':''}${s.vsiMps.toFixed(1)}`,s.vsiMps<-5?'#ff5722':'#38f2d4',350],['G-LOAD',`${s.gLoad.toFixed(1)}G`,'#f8fafc',386],['ENG EGT',`${R(s.engineTempC)}°C`,s.engineTempC>750?'#ff5722':'#f5a623',422]].forEach(([l,v,c,ry])=>{tx(x,l,68,ry,14,'#9db6c6','left');tx(x,v,270,ry,18,c,'right');});
-  const px=814,py=54,w=434;bx(x,px,py,w,392,'#0c131a','#475b6d',2.5);
-  [['THROTTLE',(s.throttle/1.1)*100,s.throttle>1?'#ff5722':'#38f2d4',py+28,`${R(s.throttle*100)}%`],['FUEL QTY',s.fuelPct,s.fuelPct<25?'#ff4d4f':'#f5a623',py+80,`${R(s.fuelPct)}%`],['HULL / ENG',s.hullPct,s.hullPct<60?'#ff6b2b':'#22c55e',py+132,`${R(s.hullPct)}%`]].forEach(([l,pct,c,ry,val])=>{
-    tx(x,l,px+16,ry,14,'#a9c1cf','left');tx(x,val,px+w-16,ry,14,'#f2f7fa','right');
-    x.fillStyle='#18242e';x.fillRect(px+16,ry+8,w-32,15);x.fillStyle=c;x.fillRect(px+16,ry+8,MX(0,MN(1,pct/100))*(w-32),15);
+function drawRadioAndFCU(x,s){
+  const X=602,Y=26,W=112,H=428;bezel(x,X,Y,W,H,'VHF / FCU');
+  [['COM1','118.70',GN,Y+44],['STBY','121.50','#94a3b8',Y+78],['NAV1','110.50',CY,Y+112],['XPDR','1200',AM,Y+146]].forEach(([l,v,c,ry])=>{
+    bx(x,X+8,ry,W-16,28,'#060d13','#293c4c',1.2);tx(x,l,X+14,ry+14,10,'#7fa4b6','left');tx(x,v,X+W-14,ry+14,12,c,'right');
   });
-  [['STALL',s.stalling,'#ff3b30'],['LOW FUEL',s.lowFuel,'#ffaa1d'],['GEAR DN',s.gearDown&&s.gearIntact,'#22c55e'],['FLAPS',s.flapStage>0,'#38bdf8'],['ENG DMG',s.engineHealth<80||s.malfunctions?.leftEngineOut,'#ff5722'],['TOGA',s.throttle>1,'#f59e0b']].forEach(([l,lit,c],i)=>{
-    const bw=(w-40)*.5,ax=px+16+(i%2)*(bw+8),ay=py+182+Math.floor(i/2)*44;
-    if(lit){x.shadowColor=c;x.shadowBlur=12;}bx(x,ax,ay,bw,32,lit?c:'#15202a',lit?'#fff':'#354757',1.8);x.shadowBlur=0;tx(x,l,ax+bw*.5,ay+16,14,lit?'#080c10':'#586977');
+  tx(x,'AUTOPILOT',X+W*.5,Y+192,11,AM);
+  [['AP',s.apEngaged,GN],['HDG',s.apEngaged,CY],['ALT',s.apEngaged,CY],['APR',s.ilsActive,MG],['BRK',s.speedbrake,AM],['FLAP',s.flapStage>0,'#38bdf8']].forEach(([l,on,c],i)=>{
+    const bx0=X+8+(i%2)*50,by0=Y+206+FL(i/2)*44;
+    bx(x,bx0,by0,44,34,on?'#122733':'#0d151d',on?c:'#314454',1.8);tx(x,l,bx0+22,by0+20,11.5,on?c:'#6b8294');bx(x,bx0+10,by0+5,24,4,on?c:'#1e2d3b');
   });
+  bx(x,X+8,Y+350,W-16,66,'#081018','#2a3d4d',1.4);tx(x,'PAPI',X+W*.5,Y+366,11,'#9ec0cf');
+  for(let i=0;i<4;i++){x.fillStyle=i<s.papiWhiteCount?'#fffdf0':'#ff3b30';x.beginPath();x.arc(X+24+i*21,Y+392,6.5,0,P2);x.fill();}
+}
+
+function drawG1000MFD(x,s){
+  const X=734,Y=26,W=524,H=428;bezel(x,X,Y,W,H,'G1000 MFD · EIS & MOVING MAP');
+  tx(x,`PK-GRD · ${s.activeRunwayId}`,X+W-12,Y+13,12,AM,'right');
+  const EX=X+10,EW=182;bx(x,EX,Y+34,EW,252,'#071018','#273a4a',1.4);
+  [['TRQ PWR',(s.throttle/1.1)*100,`${R(s.throttle*100)}%`,s.throttle>1?'#ff5722':CY,Y+54],['ITT EGT',MN(100,(s.engineTempC-300)/5.5),`${R(s.engineTempC)}°C`,s.engineTempC>750?'#ff5722':AM,Y+104],['FUEL QTY',s.fuelPct,`${R(s.fuelPct)}%`,s.fuelPct<25?RD:'#f5a623',Y+154],['AIRFRAME',s.hullPct,`${R(s.hullPct)}%`,s.hullPct<60?'#ff6b2b':GN,Y+204]].forEach(([l,p,v,c,ry])=>{
+    tx(x,l,EX+10,ry,11.5,'#9db8c8','left');tx(x,v,EX+EW-10,ry,13,'#fff','right');
+    bx(x,EX+10,ry+10,EW-20,13,'#162430');bx(x,EX+10,ry+10,MX(0,MN(1,p/100))*(EW-20),13,c);
+  });
+  tx(x,`FLAP ${FLAP_ANGLES[s.flapStage]}° · ${s.gearDown?'GEAR DN':'GEAR UP'}`,EX+EW*.5,Y+268,11,CY);
+  const MX0=X+202,MY0=Y+34,MW=312,MH=252,mcx=MX0+MW*.5,mcy=MY0+MH*.5,sc=MW/4400,hR=(s.headingDeg*PI)/180;
+  bx(x,MX0,MY0,MW,MH,'#061822','#2b4858',1.5);
+  x.save();x.beginPath();x.rect(MX0+2,MY0+2,MW-4,MH-4);x.clip();
+  [48,96].forEach((r)=>{x.strokeStyle='rgba(72,224,210,.22)';x.lineWidth=1;x.beginPath();x.arc(mcx,mcy,r,0,P2);x.stroke();});
+  x.save();x.translate(mcx,mcy);x.rotate(-hR);
+  [[-1040,-1460,340,'rgba(170,92,48,.38)'],[20,10,460,'rgba(44,126,76,.35)'],[1200,-1250,310,'rgba(82,132,68,.35)'],[-760,860,260,'rgba(44,126,76,.32)']].forEach(([ix,iz,ir,cl])=>{
+    x.fillStyle=cl;x.beginPath();x.arc((ix-s.position.x)*sc,(iz-s.position.z)*sc,ir*sc,0,P2);x.fill();
+  });
+  for(const r of RUNWAYS){
+    const rx=(r.x-s.position.x)*sc,rz=(r.z-s.position.z)*sc,ln=MX(14,r.length*sc),ac=r.id===s.activeRunwayId;
+    x.save();x.translate(rx,rz);x.rotate((r.headingDeg*PI)/180);bx(x,-3,-ln*.5,6,ln,ac?CY:'#e2e8f0');x.restore();
+    x.save();x.translate(rx+8,rz-6);x.rotate(hR);tx(x,r.id,0,0,10.5,ac?CY:'#cbd5e1','left');x.restore();
+  }
+  x.restore();
+  x.fillStyle='#fff';x.beginPath();x.moveTo(mcx,mcy-10);x.lineTo(mcx+8,mcy+7);x.lineTo(mcx,mcy+3);x.lineTo(mcx-8,mcy+7);x.closePath();x.fill();
+  x.restore();tx(x,'RNG 2NM · HDG UP',MX0+8,MY0+14,10,'#8bd6cc','left');
+  [['STALL',s.stalling,RD],['LOW FUEL',s.lowFuel,AM],['AP ON',s.apEngaged,GN],['ILS LOCK',s.ilsActive,MG],['GEAR DN',s.gearDown&&s.gearIntact,GN],['FLAPS',s.flapStage>0,'#38bdf8'],['SPD BRK',s.speedbrake,AM],['ENG DMG',s.engineHealth<80||s.malfunctions?.leftEngineOut||s.malfunctions?.rightEngineOut,'#ff5722']].forEach(([l,lit,c],i)=>{
+    const bw=120,ax=X+10+(i%4)*128,ay=Y+302+FL(i/4)*56;
+    if(lit){x.shadowColor=c;x.shadowBlur=10;}bx(x,ax,ay,bw,44,lit?c:'#111b24',lit?'#fff':'#2e4050',1.8);x.shadowBlur=0;
+    tx(x,l,ax+bw*.5,ay+22,13.5,lit?'#080c10':'#546778');
+  });
+}
+
+export function renderCockpitPanelCanvas(x,s,wpB){
+  x.fillStyle=lG(x,0,0,0,480,[[0,'#1f2832'],[.15,'#121920'],[1,'#0b1117']]);x.fillRect(0,0,1280,480);
+  x.fillStyle=lG(x,0,0,0,45,[[0,'rgba(255,196,104,.16)'],[1,'rgba(255,196,104,0)']]);x.fillRect(0,0,1280,45);
+  drawG1000PFD(x,s,wpB);drawRadioAndFCU(x,s);drawG1000MFD(x,s);
 }

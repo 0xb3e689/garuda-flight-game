@@ -11,36 +11,25 @@
 <canvas id="flight-canvas" aria-label="Garuda flight viewport"></canvas>
 <canvas id="hud-canvas" aria-hidden="true"></canvas>
 <dialog id="briefing-dialog" aria-labelledby="briefing-title">
-<div class="briefing-header">
-<div><span class="briefing-tag">FLIGHT BRIEFING · GARUDA G-4 (PK-GRD)</span><h1 id="briefing-title">M1 · LIGHTHOUSE MAIL</h1></div>
-<button id="launch-btn" type="button" autofocus>LAUNCH FLIGHT [ENTER]</button>
+<div class="hub-top">
+<div class="brand"><svg width="34" height="22" viewBox="0 0 60 36" aria-hidden="true"><path d="M2 14 L24 14 L20 20 L8 20Z M58 14 L36 14 L40 20 L52 20Z M30 4 L39 14 L30 32 L21 14Z" fill="#38bdf8"/></svg><div><span class="kicker">PK-GRD · G1000</span><h1 id="briefing-title">Garuda</h1></div></div>
+<div class="top-acts"><span id="hub-badge-count" class="wing-pill">0 / 5 Wings</span><button id="launch-btn" type="button" autofocus>Free Flight</button></div>
 </div>
-<div class="briefing-body">
-<p id="briefing-goal" class="briefing-goal"></p>
-<div class="briefing-steps-label">HOW TO FLY</div>
-<div class="key-grid">
-<div><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd> Bank &amp; Turn</div>
-<div><kbd>W</kbd><kbd>S</kbd> / <kbd>↑</kbd><kbd>↓</kbd> Pitch Down / Up</div>
-<div><kbd>Shift</kbd> / <kbd>Ctrl</kbd> Throttle Up / Down</div>
-<div><kbd>F</kbd> Flaps · <kbd>G</kbd> Gear · <kbd>B</kbd> Brake</div>
-<div><kbd>C</kbd> Cockpit / Chase View</div>
-<div><kbd>V</kbd> Sky Weather · <kbd>Space</kbd> Drop Cargo</div>
-<div><kbd>R</kbd> Retry · <kbd>Esc</kbd> Pause &amp; Missions</div>
-</div>
-</div>
+<div id="hub-view" class="hub-main"></div>
+<div class="key-foot"><b>A/D</b> Bank · <b>W/S</b> Pitch · <b>Shift/Ctrl</b> Throttle · <b>P</b> Autopilot · <b>X</b> Speedbrake · <b>[/]</b> Trim · <b>F</b> Flaps · <b>G</b> Gear · <b>C</b> Cockpit · <b>Esc</b> Menu</div>
 </dialog>
 <dialog id="pause-dialog" aria-labelledby="pause-title" closedby="any">
-<div class="pause-header">
-<h1 id="pause-title">PAUSED · GARUDA</h1>
-<div class="pause-actions">
-<button id="resume-btn" type="button" autofocus>RESUME [ESC]</button>
+<div class="hub-top">
+<h1 id="pause-title">Flight Menu</h1>
+<div class="top-acts">
+<button id="resume-btn" type="button" autofocus>Resume</button>
+<button id="career-btn" type="button">Career Hub</button>
 <button id="weather-btn" type="button">SKY: CLEAR [V]</button>
-<button id="restart-btn" type="button">RESTART [R]</button>
-<button id="mute-btn" type="button">AUDIO: ON</button>
+<button id="restart-btn" type="button">Restart</button>
+<button id="mute-btn" type="button">Audio: On</button>
 </div>
 </div>
-<div id="mission-list" class="mission-grid"></div>
-<div class="controls-bar">A/D or ←/→ Turn · W/S or ↑/↓ Pitch · Q/E Rudder · Shift/Ctrl Throttle · F Flaps · G Gear · B Brakes · Space Drop · C Camera · V Weather · Esc Pause</div>
+<div id="mission-list" class="pause-body"></div>
 </dialog>
 <script type="module" src="./src/main.js"></script>
 </body>
